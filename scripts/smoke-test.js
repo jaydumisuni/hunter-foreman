@@ -1,24 +1,34 @@
 const assert = require('assert');
 const { createTask, detectIntent } = require('../packages/foreman-core');
+const { sendToExternalApp } = require('../packages/app-bridge');
 
-const eventTask = createTask({
-  customerName: 'Demo Events Client',
-  channel: 'website',
-  message: 'We need wedding invitations, tickets, QR check-in and event booking support.',
+(async () => {
+  const eventTask = createTask({
+    customerName: 'Demo Events Client',
+    channel: 'website',
+    message: 'We need wedding invitations, tickets, QR check-in and event booking support.',
+  });
+
+  assert.strictEqual(detectIntent(eventTask.message), 'event_booking');
+  assert.strictEqual(eventTask.workflow.owner, 'Events Team');
+  assert.ok(eventTask.confidence >= 0.7, 'event task should have useful confidence');
+  assert.ok(eventTask.notificationPreview.email.includes('ROSE'));
+
+  const urgentTask = createTask({
+    customerName: 'Urgent Client',
+    channel: 'whatsapp',
+    message: 'This is urgent and sensitive. I need the owner to review this now.',
+  });
+
+  assert.strictEqual(urgentTask.escalation.required, true);
+  assert.strictEqual(urgentTask.status, 'needs_human_review');
+
+  const dispatch = await sendToExternalApp(eventTask, { baseUrl: '' });
+  assert.strictEqual(dispatch.sent, false);
+  assert.ok(dispatch.reason.includes('not configured'));
+
+  console.log('Hunter Foreman smoke test passed');
+})().catch(error => {
+  console.error(error);
+  process.exit(1);
 });
-
-assert.strictEqual(detectIntent(eventTask.message), 'event_booking');
-assert.strictEqual(eventTask.workflow.owner, 'Events Team');
-assert.ok(eventTask.confidence >= 0.7, 'event task should have useful confidence');
-assert.ok(eventTask.notificationPreview.email.includes('ROSE'));
-
-const urgentTask = createTask({
-  customerName: 'Urgent Client',
-  channel: 'whatsapp',
-  message: 'This is urgent and sensitive. I need the owner to review this now.',
-});
-
-assert.strictEqual(urgentTask.escalation.required, true);
-assert.strictEqual(urgentTask.status, 'needs_human_review');
-
-console.log('Hunter Foreman smoke test passed');
