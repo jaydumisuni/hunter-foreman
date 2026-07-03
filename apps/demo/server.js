@@ -5,6 +5,7 @@ const { sendToExternalApp } = require('../../packages/app-bridge');
 const port = process.env.PORT || 3000;
 const tasks = [];
 const dispatches = [];
+const bridgeUrl = process.env.FOREMAN_APP_WEBHOOK_URL || '';
 
 function sendJson(res, status, payload) {
   res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
@@ -23,6 +24,15 @@ function readBody(req) {
 
 function getDispatchForTask(taskId) {
   return dispatches.find(item => item.taskId === taskId) || { sent: false, reason: 'Not dispatched' };
+}
+
+function getBridgeStatus() {
+  return {
+    configured: Boolean(bridgeUrl),
+    target: bridgeUrl || null,
+    tokenConfigured: Boolean(process.env.FOREMAN_APP_TOKEN),
+    lastDispatch: dispatches[0] || null,
+  };
 }
 
 const html = `<!doctype html>
@@ -64,6 +74,7 @@ const html = `<!doctype html>
     .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
     .flow div { border: 1px solid var(--line); background: rgba(16,21,31,.8); border-radius: 16px; padding: 13px; color: #dce8f7; font-weight: 800; }
     .examples { display: grid; gap: 8px; margin-top: 12px; }
+    .bridge { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
     @media (max-width: 900px) { .grid, .split, .flow { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -73,10 +84,13 @@ const html = `<!doctype html>
       <div>
         <span class="tag">Hunter Foreman Phase 1</span>
         <h1>AI Operations Foreman</h1>
-        <p>ROSE receives the request. Hunter Foreman routes the work, creates a task, previews updates, and optionally dispatches to an external app webhook.</p>
+        <p>ROSE receives the request. Hunter Foreman routes the work, creates a task, previews updates, and dispatches to a connected app when configured.</p>
         <div class="flow"><div>1. ROSE intake</div><div>2. Foreman routes</div><div>3. Dashboard updates</div><div>4. App bridge</div></div>
       </div>
-      <div class="card hero-card"><strong>App bridge ready</strong><p>Set FOREMAN_APP_WEBHOOK_URL to send created tasks into another app. If unset, the demo stays fully local.</p></div>
+      <div class="card hero-card">
+        <strong>App bridge status</strong>
+        <div id="bridgeStatus" class="bridge"><p>Checking bridge...</p></div>
+      </div>
     </header>
     <section class="grid">
       <div class="card">
@@ -107,13 +121,23 @@ const html = `<!doctype html>
     };
     const form = document.getElementById('requestForm');
     const tasksEl = document.getElementById('tasks');
+    const bridgeEl = document.getElementById('bridgeStatus');
     document.querySelectorAll('[data-example]').forEach(btn => btn.addEventListener('click', () => {
       const data = examples[btn.dataset.example];
       form.customerName.value = data.customerName;
       form.channel.value = data.channel;
       form.message.value = data.message;
     }));
-    async function loadTasks(){ const res = await fetch('/api/tasks'); const data = await res.json(); renderTasks(data.tasks); }
+    async function loadBridgeStatus(){
+      const res = await fetch('/api/app-bridge/status');
+      const data = await res.json();
+      bridgeEl.innerHTML = `
+        <p>Status: <strong class="${data.configured ? 'warn' : ''}">${data.configured ? 'Connected' : 'Local only'}</strong></p>
+        <p>Target: <code>${data.target || 'not configured'}</code></p>
+        <p>Last dispatch: <strong>${data.lastDispatch ? (data.lastDispatch.sent ? 'sent' : 'failed/local') : 'none yet'}</strong></p>
+      `;
+    }
+    async function loadTasks(){ const res = await fetch('/api/tasks'); const data = await res.json(); renderTasks(data.tasks); await loadBridgeStatus(); }
     function renderTasks(tasks){
       if(!tasks.length){ tasksEl.innerHTML = '<p>No requests yet. Send one from ROSE intake.</p>'; return; }
       tasksEl.innerHTML = tasks.map(task => `
@@ -130,6 +154,7 @@ const html = `<!doctype html>
     }
     form.addEventListener('submit', async event => { event.preventDefault(); const payload = Object.fromEntries(new FormData(form).entries()); await fetch('/api/requests', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }); await loadTasks(); });
     loadTasks();
+    setInterval(loadBridgeStatus, 2500);
   </script>
 </body>
 </html>`;
@@ -137,6 +162,7 @@ const html = `<!doctype html>
 http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return sendJson(res, 200, { ok: true });
   if (req.url === '/health') return sendJson(res, 200, { ok: true, service: 'hunter-foreman-demo', appBridge: Boolean(process.env.FOREMAN_APP_WEBHOOK_URL) });
+  if (req.method === 'GET' && req.url === '/api/app-bridge/status') return sendJson(res, 200, getBridgeStatus());
   if (req.method === 'GET' && req.url === '/api/tasks') return sendJson(res, 200, { tasks });
   if (req.method === 'POST' && req.url === '/api/requests') {
     try {
