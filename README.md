@@ -4,7 +4,7 @@ AI operations foreman for small businesses — routes requests, escalates tasks,
 
 ## Hackathon Focus
 
-Hunter Foreman is the public hackathon edition of the Hunter architecture. It demonstrates how a business request can move from ROSE, the AI receptionist, into routing, task creation, dashboard visibility, notification previews, and human escalation.
+Hunter Foreman is the public hackathon edition of the Hunter architecture. It demonstrates how a business request can move from ROSE, the AI receptionist, into routing, task creation, dashboard visibility, notification previews, optional app dispatch, and human escalation.
 
 This repository is intentionally public-safe. It does **not** include private THETECHGUY repair engines, proprietary recovery workflows, private credentials, private prompts, client data, or internal production logic.
 
@@ -25,6 +25,8 @@ Dashboard update
     ↓
 Email / WhatsApp preview
     ↓
+Optional app bridge dispatch
+    ↓
 Human escalation when needed
 ```
 
@@ -35,8 +37,9 @@ apps/
   demo/                 Public demo web app and API
 packages/
   foreman-core/         Public-safe routing and task logic
+  app-bridge/           Optional external app bridge
 scripts/                Smoke tests
-docs/                   Architecture and submission notes
+docs/                   Architecture, API, bridge, and submission notes
 docker-compose.yml      Judge-friendly container startup
 Dockerfile              Demo container
 .env.example            Safe environment template
@@ -74,8 +77,15 @@ npm test
 - `GET /health`
 - `POST /api/requests`
 - `GET /api/tasks`
+- `GET /api/dispatch/:taskId`
 
 See `docs/public-api.md`.
+
+## App Bridge
+
+Hunter Foreman can optionally dispatch created tasks to a separate app receiver.
+
+See `docs/app-bridge-runbook.md`.
 
 ## Public Safety Rules
 
@@ -88,4 +98,4 @@ See `docs/public-api.md`.
 
 ## Project Status
 
-Phase 1 public demo implementation in progress.
+Phase 1 public demo implementation connected to optional app bridge.
