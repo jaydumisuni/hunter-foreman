@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { createTask, detectIntent } = require('../packages/foreman-core');
-const { sendToExternalApp } = require('../packages/app-bridge');
+const { CONTRACT_VERSION, createBridgeEnvelope, sendToExternalApp } = require('../packages/app-bridge');
 
 (async () => {
   const eventTask = createTask({
@@ -22,6 +22,13 @@ const { sendToExternalApp } = require('../packages/app-bridge');
 
   assert.strictEqual(urgentTask.escalation.required, true);
   assert.strictEqual(urgentTask.status, 'needs_human_review');
+
+  const envelope = createBridgeEnvelope(eventTask);
+  assert.strictEqual(CONTRACT_VERSION, 'foreman.app.task.v1');
+  assert.strictEqual(envelope.contract, CONTRACT_VERSION);
+  assert.strictEqual(envelope.eventType, 'task.created');
+  assert.strictEqual(envelope.task.id, eventTask.id);
+  assert.ok(envelope.timeline.length >= 3, 'bridge envelope should include a visible timeline');
 
   const dispatch = await sendToExternalApp(eventTask, { baseUrl: '' });
   assert.strictEqual(dispatch.sent, false);
