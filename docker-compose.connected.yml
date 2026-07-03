@@ -1,0 +1,25 @@
+services:
+  hunter-foreman:
+    build: .
+    container_name: hunter-foreman
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - FOREMAN_APP_WEBHOOK_URL=http://hunter-foreman-demo-receiver:3100
+      - FOREMAN_APP_TOKEN=
+    depends_on:
+      - hunter-foreman-demo-receiver
+
+  hunter-foreman-demo-receiver:
+    image: node:22-alpine
+    container_name: hunter-foreman-demo-receiver
+    working_dir: /app
+    command: npm run dev
+    ports:
+      - "3100:3100"
+    environment:
+      - PORT=3100
+      - FOREMAN_APP_TOKEN=
+    volumes:
+      - ../hunter-foreman-demo:/app
