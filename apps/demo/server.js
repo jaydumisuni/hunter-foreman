@@ -1,8 +1,10 @@
 const http = require('http');
 const { createTask } = require('../../packages/foreman-core');
+const { sendToExternalApp } = require('../../packages/app-bridge');
 
 const port = process.env.PORT || 3000;
 const tasks = [];
+const dispatches = [];
 
 function sendJson(res, status, payload) {
   res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
@@ -17,6 +19,10 @@ function readBody(req) {
       try { resolve(data ? JSON.parse(data) : {}); } catch (error) { reject(error); }
     });
   });
+}
+
+function getDispatchForTask(taskId) {
+  return dispatches.find(item => item.taskId === taskId) || { sent: false, reason: 'Not dispatched' };
 }
 
 const html = `<!doctype html>
@@ -67,10 +73,10 @@ const html = `<!doctype html>
       <div>
         <span class="tag">Hunter Foreman Phase 1</span>
         <h1>AI Operations Foreman</h1>
-        <p>ROSE receives the request. Hunter Foreman routes the work, creates a task, previews updates, and escalates when a human should decide.</p>
-        <div class="flow"><div>1. ROSE intake</div><div>2. Foreman routes</div><div>3. Dashboard updates</div><div>4. Human if needed</div></div>
+        <p>ROSE receives the request. Hunter Foreman routes the work, creates a task, previews updates, and optionally dispatches to an external app webhook.</p>
+        <div class="flow"><div>1. ROSE intake</div><div>2. Foreman routes</div><div>3. Dashboard updates</div><div>4. App bridge</div></div>
       </div>
-      <div class="card hero-card"><strong>Public-safe demo</strong><p>No private Hunter Core, no repair modules, no secrets, no client data. This is a clean public extraction.</p></div>
+      <div class="card hero-card"><strong>App bridge ready</strong><p>Set FOREMAN_APP_WEBHOOK_URL to send created tasks into another app. If unset, the demo stays fully local.</p></div>
     </header>
     <section class="grid">
       <div class="card">
@@ -117,6 +123,7 @@ const html = `<!doctype html>
           <p>Status: <strong class="${task.escalation.required ? 'warn' : ''}">${task.status}</strong></p>
           <p>Owner: <strong>${task.workflow.owner}</strong></p>
           <p>Escalation: <strong class="${task.escalation.required ? 'danger' : ''}">${task.escalation.required ? 'Human review required' : 'Not required'}</strong> — ${task.escalation.reason}</p>
+          <p>App bridge: <strong>${task.dispatch.sent ? 'Sent' : 'Local only'}</strong> — ${task.dispatch.reason || 'Webhook accepted task'}</p>
           <ol class="steps">${task.workflow.steps.map(step => `<li>${step}</li>`).join('')}</ol>
           <div class="split"><div><h3>Email Preview</h3><pre>${task.notificationPreview.email}</pre></div><div><h3>WhatsApp Preview</h3><pre>${task.notificationPreview.whatsapp}</pre></div></div>
         </article>`).join('');
@@ -129,18 +136,25 @@ const html = `<!doctype html>
 
 http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return sendJson(res, 200, { ok: true });
-  if (req.url === '/health') return sendJson(res, 200, { ok: true, service: 'hunter-foreman-demo' });
+  if (req.url === '/health') return sendJson(res, 200, { ok: true, service: 'hunter-foreman-demo', appBridge: Boolean(process.env.FOREMAN_APP_WEBHOOK_URL) });
   if (req.method === 'GET' && req.url === '/api/tasks') return sendJson(res, 200, { tasks });
   if (req.method === 'POST' && req.url === '/api/requests') {
     try {
       const body = await readBody(req);
       if (!body.message || !String(body.message).trim()) return sendJson(res, 422, { ok: false, error: 'Request message is required' });
       const task = createTask(body);
+      const dispatch = await sendToExternalApp(task).catch(error => ({ sent: false, reason: error.message }));
+      task.dispatch = dispatch;
+      dispatches.unshift({ taskId: task.id, ...dispatch });
       tasks.unshift(task);
-      return sendJson(res, 201, { ok: true, task });
+      return sendJson(res, 201, { ok: true, task, dispatch });
     } catch (error) {
       return sendJson(res, 400, { ok: false, error: 'Invalid request body' });
     }
+  }
+  if (req.method === 'GET' && req.url.startsWith('/api/dispatch/')) {
+    const taskId = decodeURIComponent(req.url.split('/').pop());
+    return sendJson(res, 200, getDispatchForTask(taskId));
   }
   res.writeHead(200, { 'content-type': 'text/html' });
   res.end(html);
