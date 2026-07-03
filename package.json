@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node apps/demo/server.js",
     "start": "node apps/demo/server.js",
-    "test": "node -e \"console.log('Hunter Foreman scaffold test passed')\""
+    "test": "node scripts/smoke-test.js"
   },
   "license": "MIT"
 }
