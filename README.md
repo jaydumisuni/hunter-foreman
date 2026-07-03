@@ -41,6 +41,7 @@ packages/
 scripts/                Smoke tests
 docs/                   Architecture, API, bridge, and submission notes
 docker-compose.yml      Judge-friendly container startup
+docker-compose.connected.yml  Two-app local demo startup
 Dockerfile              Demo container
 .env.example            Safe environment template
 PHASE_1_LOCK.md         Locked scope
@@ -58,6 +59,23 @@ Open:
 ```text
 http://localhost:3000
 ```
+
+## Run Connected Two-App Demo
+
+Place `hunter-foreman` and `hunter-foreman-demo` beside each other, then run from this repo:
+
+```bash
+docker compose -f docker-compose.connected.yml up --build
+```
+
+Open:
+
+```text
+http://localhost:3000
+http://localhost:3100
+```
+
+See `docs/connected-local-run.md`.
 
 ## Run locally
 
