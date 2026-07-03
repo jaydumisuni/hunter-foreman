@@ -1,0 +1,24 @@
+const assert = require('assert');
+const { createTask, detectIntent } = require('../packages/foreman-core');
+
+const eventTask = createTask({
+  customerName: 'Demo Events Client',
+  channel: 'website',
+  message: 'We need wedding invitations, tickets, QR check-in and event booking support.',
+});
+
+assert.strictEqual(detectIntent(eventTask.message), 'event_booking');
+assert.strictEqual(eventTask.workflow.owner, 'Events Team');
+assert.ok(eventTask.confidence >= 0.7, 'event task should have useful confidence');
+assert.ok(eventTask.notificationPreview.email.includes('ROSE'));
+
+const urgentTask = createTask({
+  customerName: 'Urgent Client',
+  channel: 'whatsapp',
+  message: 'This is urgent and sensitive. I need the owner to review this now.',
+});
+
+assert.strictEqual(urgentTask.escalation.required, true);
+assert.strictEqual(urgentTask.status, 'needs_human_review');
+
+console.log('Hunter Foreman smoke test passed');
