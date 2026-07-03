@@ -17,7 +17,7 @@ const { sendToExternalApp } = require('../packages/app-bridge');
   const urgentTask = createTask({
     customerName: 'Urgent Client',
     channel: 'whatsapp',
-    message: 'This is urgent and sensitive. I need the owner to review this now.',
+    message: 'This is urgent and sensitive. I need human review now.',
   });
 
   assert.strictEqual(urgentTask.escalation.required, true);
@@ -26,6 +26,17 @@ const { sendToExternalApp } = require('../packages/app-bridge');
   const dispatch = await sendToExternalApp(eventTask, { baseUrl: '' });
   assert.strictEqual(dispatch.sent, false);
   assert.ok(dispatch.reason.includes('not configured'));
+
+  const statusShape = {
+    configured: false,
+    target: null,
+    tokenConfigured: false,
+    lastDispatch: null,
+  };
+
+  assert.strictEqual(typeof statusShape.configured, 'boolean');
+  assert.strictEqual(statusShape.target, null);
+  assert.strictEqual(typeof statusShape.tokenConfigured, 'boolean');
 
   console.log('Hunter Foreman smoke test passed');
 })().catch(error => {
