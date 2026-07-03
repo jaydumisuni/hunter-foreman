@@ -8,6 +8,14 @@ Hunter Foreman is the public hackathon edition of the Hunter architecture. It de
 
 This repository is intentionally public-safe. It does **not** include private THETECHGUY repair engines, proprietary recovery workflows, private credentials, private prompts, client data, or internal production logic.
 
+## Three-Repo Phase 1 Map
+
+- Core app: `jaydumisuni/hunter-foreman`
+- Demo receiver: `jaydumisuni/hunter-foreman-demo`
+- Submission pack: `jaydumisuni/hunter-foreman-docs`
+
+Review the three repositories together before the break/test phase.
+
 ## Phase 1 Demo
 
 ```text
@@ -96,12 +104,13 @@ npm test
 - `POST /api/requests`
 - `GET /api/tasks`
 - `GET /api/dispatch/:taskId`
+- `GET /api/app-bridge/status`
 
-See `docs/public-api.md`.
+See `docs/app-connection-api.md` and `docs/app-bridge-contract.md`.
 
 ## App Bridge
 
-Hunter Foreman can optionally dispatch created tasks to a separate app receiver.
+Hunter Foreman can dispatch created tasks to the separate receiver app using the versioned `foreman.app.task.v1` contract.
 
 See `docs/app-bridge-runbook.md`.
 
