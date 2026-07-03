@@ -1,0 +1,8 @@
+services:
+  hunter-foreman:
+    build: .
+    container_name: hunter-foreman-demo
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.example
