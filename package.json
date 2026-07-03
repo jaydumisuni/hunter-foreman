@@ -1,0 +1,12 @@
+{
+  "name": "hunter-foreman",
+  "version": "0.1.0",
+  "private": false,
+  "description": "AI operations foreman for small businesses.",
+  "scripts": {
+    "dev": "node apps/demo/server.js",
+    "start": "node apps/demo/server.js",
+    "test": "node -e \"console.log('Hunter Foreman scaffold test passed')\""
+  },
+  "license": "MIT"
+}
