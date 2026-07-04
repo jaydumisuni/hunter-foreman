@@ -1,41 +1,9 @@
-const http = require('http');
-const https = require('https');
 const { createTask } = require('../foreman-core');
 
 const CONTRACT_VERSION = 'foreman.app.task.v1';
 
 function normalizeBaseUrl(baseUrl) {
   return String(baseUrl || '').replace(/\/+$/, '');
-}
-
-function postJson(url, payload, headers = {}) {
-  return new Promise((resolve, reject) => {
-    const target = new URL(url);
-    const body = JSON.stringify(payload);
-    const client = target.protocol === 'https:' ? https : http;
-    const request = client.request({
-      method: 'POST',
-      hostname: target.hostname,
-      port: target.port || undefined,
-      path: `${target.pathname}${target.search}`,
-      headers: {
-        'content-type': 'application/json',
-        'content-length': Buffer.byteLength(body),
-        ...headers,
-      },
-    }, response => {
-      let data = '';
-      response.on('data', chunk => { data += chunk; });
-      response.on('end', () => {
-        let parsed = null;
-        try { parsed = data ? JSON.parse(data) : null; } catch (_) { parsed = data; }
-        resolve({ statusCode: response.statusCode, body: parsed });
-      });
-    });
-    request.on('error', reject);
-    request.write(body);
-    request.end();
-  });
 }
 
 function createBridgeEnvelope(task, options = {}) {
@@ -61,13 +29,19 @@ async function sendToExternalApp(task, options = {}) {
     return { sent: false, reason: 'FOREMAN_APP_WEBHOOK_URL not configured' };
   }
 
-  const headers = { 'x-foreman-contract': CONTRACT_VERSION };
-  const token = options.token || process.env.FOREMAN_APP_TOKEN;
-  if (token) headers.authorization = `Bearer ${token}`;
-
   const envelope = createBridgeEnvelope(task, options);
-  const response = await postJson(`${baseUrl}/foreman/tasks`, envelope, headers);
-  return { sent: response.statusCode >= 200 && response.statusCode < 300, response, envelope };
+  const response = await fetch(`${baseUrl}/foreman/tasks`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-foreman-contract': CONTRACT_VERSION,
+    },
+    body: JSON.stringify(envelope),
+  });
+  const text = await response.text();
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch (_) { body = text; }
+  return { sent: response.ok, response: { statusCode: response.status, body } };
 }
 
 async function createAndDispatchRequest(input, options = {}) {
