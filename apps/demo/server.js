@@ -26,6 +26,59 @@ function getDispatchForTask(taskId) {
   return dispatches.find(item => item.taskId === taskId) || { sent: false, reason: 'Not dispatched' };
 }
 
+function getReceiverAck(dispatch) {
+  return dispatch && dispatch.response && dispatch.response.body && dispatch.response.body.received
+    ? dispatch.response.body.received
+    : null;
+}
+
+function getReceiverState(task, dispatch) {
+  const ack = getReceiverAck(dispatch);
+  if (!bridgeUrl) {
+    return { state: 'local_only', label: 'Local only', detail: 'No receiver app is configured for this run.' };
+  }
+  if (!dispatch.sent) {
+    return { state: 'dispatch_failed', label: 'Dispatch failed', detail: dispatch.reason || 'Receiver did not accept the task.' };
+  }
+  if (ack) {
+    return { state: 'receiver_accepted', label: 'Receiver accepted', detail: `External app accepted ${task.id}.` };
+  }
+  return { state: 'waiting_for_receiver', label: 'Waiting for receiver', detail: 'Task was sent but no receiver acknowledgement is visible yet.' };
+}
+
+function buildTaskLifecycle(task, dispatch) {
+  const now = new Date().toISOString();
+  const ack = getReceiverAck(dispatch);
+  const receiverState = getReceiverState(task, dispatch);
+  const steps = [
+    { at: now, actor: 'ROSE', action: 'request_received', label: 'ROSE received', status: 'done' },
+    { at: now, actor: 'Foreman', action: 'intent_classified', label: 'Foreman analyzed', status: 'done' },
+    { at: now, actor: 'Foreman', action: 'workflow_selected', label: 'Workflow selected', status: 'done' },
+    { at: now, actor: 'Foreman', action: 'task_created', label: 'Task created', status: 'done' },
+  ];
+
+  if (!bridgeUrl) {
+    steps.push({ at: now, actor: 'AppBridge', action: 'local_only_no_receiver_configured', label: 'Sent to app', status: 'skipped' });
+    steps.push({ at: now, actor: 'ReceiverApp', action: 'not_configured', label: 'Receiver accepted', status: 'skipped' });
+  } else if (dispatch.sent) {
+    steps.push({ at: now, actor: 'AppBridge', action: 'task_dispatched', label: 'Sent to app', status: 'done' });
+    steps.push({ at: ack && ack.receivedAt ? ack.receivedAt : now, actor: 'ReceiverApp', action: 'acknowledged_task', label: 'Receiver accepted', status: ack ? 'done' : 'pending' });
+  } else {
+    steps.push({ at: now, actor: 'AppBridge', action: 'dispatch_failed', label: 'Sent to app', status: 'needs_attention' });
+    steps.push({ at: now, actor: 'ReceiverApp', action: 'not_received', label: 'Receiver accepted', status: 'needs_attention' });
+  }
+
+  steps.push({ at: now, actor: 'ReceiverApp', action: 'waiting_for_worker', label: 'Waiting for worker', status: receiverState.state === 'receiver_accepted' ? 'pending' : 'waiting' });
+  steps.push({ at: now, actor: 'ReceiverApp', action: 'worker_in_progress', label: 'In progress', status: 'waiting' });
+  steps.push({ at: now, actor: 'ReceiverApp', action: 'work_completed', label: 'Completed', status: 'waiting' });
+
+  if (task.escalation.required) {
+    steps.push({ at: now, actor: 'Foreman', action: 'human_review_required', label: 'Human review required', status: 'needs_attention' });
+  }
+
+  return steps;
+}
+
 function getBridgeStatus() {
   return {
     configured: Boolean(bridgeUrl),
@@ -66,16 +119,24 @@ const html = `<!doctype html>
     .pill { display: inline-flex; padding: 6px 9px; border-radius: 999px; background: #202839; color: #dce8f7; font-size: 12px; font-weight: 900; }
     .pill.ok { color: var(--accent); }
     .pill.warn { color: var(--warn); }
+    .pill.danger { color: var(--danger); }
+    .pill.waiting { color: #9bb7ff; }
     .warn { color: var(--warn); }
     .danger { color: var(--danger); }
+    .ok { color: var(--accent); }
     .steps { margin: 10px 0 0; padding-left: 20px; color: #cbd6e5; }
+    .state-ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+    .state-card { border: 1px solid var(--line); border-radius: 14px; padding: 10px; background: #0d1118; min-height: 72px; }
+    .timeline { display: grid; gap: 8px; margin: 12px 0; }
+    .timeline-step { border: 1px solid var(--line); border-radius: 14px; padding: 10px; background: #0d1118; }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     pre { white-space: pre-wrap; background: #0d1118; border: 1px solid var(--line); padding: 12px; border-radius: 14px; color: #dce8f7; }
+    code { color: #dce8f7; }
     .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
     .flow div { border: 1px solid var(--line); background: rgba(16,21,31,.8); border-radius: 16px; padding: 13px; color: #dce8f7; font-weight: 800; }
     .examples { display: grid; gap: 8px; margin-top: 12px; }
     .bridge { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
-    @media (max-width: 900px) { .grid, .split, .flow { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .grid, .split, .flow, .state-ladder { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -122,6 +183,9 @@ const html = `<!doctype html>
     const form = document.getElementById('requestForm');
     const tasksEl = document.getElementById('tasks');
     const bridgeEl = document.getElementById('bridgeStatus');
+    function escapeHtml(value){ return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char])); }
+    function safeStatusClass(status){ return status === 'needs_attention' ? 'danger' : status === 'skipped' ? 'warn' : status === 'waiting' || status === 'pending' ? 'waiting' : 'ok'; }
+    function receiverAck(dispatch){ return dispatch && dispatch.response && dispatch.response.body && dispatch.response.body.received ? dispatch.response.body.received : null; }
     document.querySelectorAll('[data-example]').forEach(btn => btn.addEventListener('click', () => {
       const data = examples[btn.dataset.example];
       form.customerName.value = data.customerName;
@@ -131,26 +195,47 @@ const html = `<!doctype html>
     async function loadBridgeStatus(){
       const res = await fetch('/api/app-bridge/status');
       const data = await res.json();
+      const ack = receiverAck(data.lastDispatch);
       bridgeEl.innerHTML = `
         <p>Status: <strong class="${data.configured ? 'warn' : ''}">${data.configured ? 'Connected' : 'Local only'}</strong></p>
-        <p>Target: <code>${data.target || 'not configured'}</code></p>
+        <p>Target: <code>${escapeHtml(data.target || 'not configured')}</code></p>
         <p>Last dispatch: <strong>${data.lastDispatch ? (data.lastDispatch.sent ? 'sent' : 'failed/local') : 'none yet'}</strong></p>
+        <p>Receiver ack: <strong>${ack ? 'received' : 'none yet'}</strong></p>
+        ${ack ? `<p>Receiver event: <code>${escapeHtml(ack.eventId)}</code></p>` : ''}
       `;
     }
     async function loadTasks(){ const res = await fetch('/api/tasks'); const data = await res.json(); renderTasks(data.tasks); await loadBridgeStatus(); }
+    function renderStateLadder(task){
+      return `<div class="state-ladder">${task.lifecycle.map(step => `
+        <div class="state-card">
+          <span class="pill ${safeStatusClass(step.status)}">${escapeHtml(step.status)}</span>
+          <p><strong>${escapeHtml(step.label || step.action)}</strong></p>
+          <small>${escapeHtml(step.actor)}</small>
+        </div>`).join('')}</div>`;
+    }
     function renderTasks(tasks){
       if(!tasks.length){ tasksEl.innerHTML = '<p>No requests yet. Send one from ROSE intake.</p>'; return; }
-      tasksEl.innerHTML = tasks.map(task => `
+      tasksEl.innerHTML = tasks.map(task => {
+        const ack = receiverAck(task.dispatch);
+        return `
         <article class="task">
-          <div class="row"><span class="pill">${task.id}</span><span class="pill ok">${task.workflow.label}</span><span class="pill ${task.escalation.required ? 'warn' : 'ok'}">Confidence: ${Math.round(task.confidence * 100)}%</span></div>
-          <strong>${task.customerName}</strong><p>${task.message}</p>
-          <p>Status: <strong class="${task.escalation.required ? 'warn' : ''}">${task.status}</strong></p>
-          <p>Owner: <strong>${task.workflow.owner}</strong></p>
-          <p>Escalation: <strong class="${task.escalation.required ? 'danger' : ''}">${task.escalation.required ? 'Human review required' : 'Not required'}</strong> — ${task.escalation.reason}</p>
-          <p>App bridge: <strong>${task.dispatch.sent ? 'Sent' : 'Local only'}</strong> — ${task.dispatch.reason || 'Webhook accepted task'}</p>
-          <ol class="steps">${task.workflow.steps.map(step => `<li>${step}</li>`).join('')}</ol>
-          <div class="split"><div><h3>Email Preview</h3><pre>${task.notificationPreview.email}</pre></div><div><h3>WhatsApp Preview</h3><pre>${task.notificationPreview.whatsapp}</pre></div></div>
-        </article>`).join('');
+          <div class="row"><span class="pill">${escapeHtml(task.id)}</span><span class="pill ok">${escapeHtml(task.workflow.label)}</span><span class="pill ${task.escalation.required ? 'warn' : 'ok'}">Confidence: ${Math.round(task.confidence * 100)}%</span></div>
+          <strong>${escapeHtml(task.customerName)}</strong><p>${escapeHtml(task.message)}</p>
+          <p>Status: <strong class="${task.escalation.required ? 'warn' : ''}">${escapeHtml(task.status)}</strong></p>
+          <p>Owner: <strong>${escapeHtml(task.workflow.owner)}</strong></p>
+          <p>Receiver state: <strong class="${task.receiverState.state === 'receiver_accepted' ? 'ok' : task.receiverState.state === 'dispatch_failed' ? 'danger' : 'warn'}">${escapeHtml(task.receiverState.label)}</strong> — ${escapeHtml(task.receiverState.detail)}</p>
+          <p>Escalation: <strong class="${task.escalation.required ? 'danger' : ''}">${task.escalation.required ? 'Human review required' : 'Not required'}</strong> — ${escapeHtml(task.escalation.reason)}</p>
+          <p>App bridge: <strong>${task.dispatch.sent ? 'Sent' : 'Local only'}</strong> — ${escapeHtml(task.dispatch.reason || 'Receiver accepted task')}</p>
+          <p>Receiver acknowledgement: <strong class="${ack ? 'ok' : 'warn'}">${ack ? 'Received by connected app' : 'No receiver acknowledgement yet'}</strong></p>
+          ${ack ? `<p>Receiver event ID: <code>${escapeHtml(ack.eventId)}</code></p>` : ''}
+          <h3>Live state ladder</h3>
+          ${renderStateLadder(task)}
+          <h3>Detailed timeline</h3>
+          <div class="timeline">${task.lifecycle.map(step => `<div class="timeline-step"><span class="pill ${safeStatusClass(step.status)}">${escapeHtml(step.status)}</span> <strong>${escapeHtml(step.actor)}</strong>: ${escapeHtml(step.action)}<br><small>${escapeHtml(step.at)}</small></div>`).join('')}</div>
+          <ol class="steps">${task.workflow.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+          <div class="split"><div><h3>Email Preview</h3><pre>${escapeHtml(task.notificationPreview.email)}</pre></div><div><h3>WhatsApp Preview</h3><pre>${escapeHtml(task.notificationPreview.whatsapp)}</pre></div></div>
+        </article>`;
+      }).join('');
     }
     form.addEventListener('submit', async event => { event.preventDefault(); const payload = Object.fromEntries(new FormData(form).entries()); await fetch('/api/requests', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }); await loadTasks(); });
     loadTasks();
@@ -171,7 +256,9 @@ http.createServer(async (req, res) => {
       const task = createTask(body);
       const dispatch = await sendToExternalApp(task).catch(error => ({ sent: false, reason: error.message }));
       task.dispatch = dispatch;
-      dispatches.unshift({ taskId: task.id, ...dispatch });
+      task.receiverState = getReceiverState(task, dispatch);
+      task.lifecycle = buildTaskLifecycle(task, dispatch);
+      dispatches.unshift({ taskId: task.id, receiverState: task.receiverState, ...dispatch });
       tasks.unshift(task);
       return sendJson(res, 201, { ok: true, task, dispatch });
     } catch (error) {
