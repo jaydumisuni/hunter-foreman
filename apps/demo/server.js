@@ -196,28 +196,28 @@ const html = `<!doctype html>
       const res = await fetch('/api/app-bridge/status');
       const data = await res.json();
       const ack = receiverAck(data.lastDispatch);
-      bridgeEl.innerHTML = `
+      bridgeEl.innerHTML = \`
         <p>Status: <strong class="${data.configured ? 'warn' : ''}">${data.configured ? 'Connected' : 'Local only'}</strong></p>
         <p>Target: <code>${escapeHtml(data.target || 'not configured')}</code></p>
         <p>Last dispatch: <strong>${data.lastDispatch ? (data.lastDispatch.sent ? 'sent' : 'failed/local') : 'none yet'}</strong></p>
         <p>Receiver ack: <strong>${ack ? 'received' : 'none yet'}</strong></p>
-        ${ack ? `<p>Receiver event: <code>${escapeHtml(ack.eventId)}</code></p>` : ''}
-      `;
+        ${ack ? \`<p>Receiver event: <code>${escapeHtml(ack.eventId)}</code></p>\` : ''}
+      \`;
     }
     async function loadTasks(){ const res = await fetch('/api/tasks'); const data = await res.json(); renderTasks(data.tasks); await loadBridgeStatus(); }
     function renderStateLadder(task){
-      return `<div class="state-ladder">${task.lifecycle.map(step => `
+      return \`<div class="state-ladder">${task.lifecycle.map(step => \`
         <div class="state-card">
           <span class="pill ${safeStatusClass(step.status)}">${escapeHtml(step.status)}</span>
           <p><strong>${escapeHtml(step.label || step.action)}</strong></p>
           <small>${escapeHtml(step.actor)}</small>
-        </div>`).join('')}</div>`;
+        </div>\`).join('')}</div>\`;
     }
     function renderTasks(tasks){
       if(!tasks.length){ tasksEl.innerHTML = '<p>No requests yet. Send one from ROSE intake.</p>'; return; }
       tasksEl.innerHTML = tasks.map(task => {
         const ack = receiverAck(task.dispatch);
-        return `
+        return \`
         <article class="task">
           <div class="row"><span class="pill">${escapeHtml(task.id)}</span><span class="pill ok">${escapeHtml(task.workflow.label)}</span><span class="pill ${task.escalation.required ? 'warn' : 'ok'}">Confidence: ${Math.round(task.confidence * 100)}%</span></div>
           <strong>${escapeHtml(task.customerName)}</strong><p>${escapeHtml(task.message)}</p>
@@ -227,14 +227,14 @@ const html = `<!doctype html>
           <p>Escalation: <strong class="${task.escalation.required ? 'danger' : ''}">${task.escalation.required ? 'Human review required' : 'Not required'}</strong> — ${escapeHtml(task.escalation.reason)}</p>
           <p>App bridge: <strong>${task.dispatch.sent ? 'Sent' : 'Local only'}</strong> — ${escapeHtml(task.dispatch.reason || 'Receiver accepted task')}</p>
           <p>Receiver acknowledgement: <strong class="${ack ? 'ok' : 'warn'}">${ack ? 'Received by connected app' : 'No receiver acknowledgement yet'}</strong></p>
-          ${ack ? `<p>Receiver event ID: <code>${escapeHtml(ack.eventId)}</code></p>` : ''}
+          ${ack ? \`<p>Receiver event ID: <code>${escapeHtml(ack.eventId)}</code></p>\` : ''}
           <h3>Live state ladder</h3>
           ${renderStateLadder(task)}
           <h3>Detailed timeline</h3>
-          <div class="timeline">${task.lifecycle.map(step => `<div class="timeline-step"><span class="pill ${safeStatusClass(step.status)}">${escapeHtml(step.status)}</span> <strong>${escapeHtml(step.actor)}</strong>: ${escapeHtml(step.action)}<br><small>${escapeHtml(step.at)}</small></div>`).join('')}</div>
-          <ol class="steps">${task.workflow.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+          <div class="timeline">${task.lifecycle.map(step => \`<div class="timeline-step"><span class="pill ${safeStatusClass(step.status)}">${escapeHtml(step.status)}</span> <strong>${escapeHtml(step.actor)}</strong>: ${escapeHtml(step.action)}<br><small>${escapeHtml(step.at)}</small></div>\`).join('')}</div>
+          <ol class="steps">${task.workflow.steps.map(step => \`<li>${escapeHtml(step)}</li>\`).join('')}</ol>
           <div class="split"><div><h3>Email Preview</h3><pre>${escapeHtml(task.notificationPreview.email)}</pre></div><div><h3>WhatsApp Preview</h3><pre>${escapeHtml(task.notificationPreview.whatsapp)}</pre></div></div>
-        </article>`;
+        </article>\`;
       }).join('');
     }
     form.addEventListener('submit', async event => { event.preventDefault(); const payload = Object.fromEntries(new FormData(form).entries()); await fetch('/api/requests', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }); await loadTasks(); });
