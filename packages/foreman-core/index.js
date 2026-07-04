@@ -52,8 +52,8 @@ function normalizeText(value) {
 function detectIntent(message) {
   const value = normalizeText(message).toLowerCase();
   if (/event|wedding|ticket|invite|qr|check.?in|booking|birthday|conference|chilanga/.test(value)) return 'event_booking';
-  if (/website|app|bug|support|issue|error|not working|tech/.test(value)) return 'tech_support';
   if (/automation|workflow|receptionist|dashboard|business|system|whatsapp|email/.test(value)) return 'business_automation';
+  if (/website|\bapp\b|bug|support|issue|error|not working|tech/.test(value)) return 'tech_support';
   return 'general_request';
 }
 
