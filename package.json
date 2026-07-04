@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node apps/demo/server.js",
     "start": "node apps/demo/server.js",
-    "test": "node scripts/smoke-test.js"
+    "test": "node --check apps/demo/server.js && node scripts/smoke-test.js"
   },
   "license": "MIT"
 }
