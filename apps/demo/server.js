@@ -26,6 +26,38 @@ function getDispatchForTask(taskId) {
   return dispatches.find(item => item.taskId === taskId) || { sent: false, reason: 'Not dispatched' };
 }
 
+function getReceiverAck(dispatch) {
+  return dispatch && dispatch.response && dispatch.response.body && dispatch.response.body.received
+    ? dispatch.response.body.received
+    : null;
+}
+
+function buildTaskLifecycle(task, dispatch) {
+  const now = new Date().toISOString();
+  const ack = getReceiverAck(dispatch);
+  const steps = [
+    { at: now, actor: 'ROSE', action: 'request_received', status: 'done' },
+    { at: now, actor: 'Foreman', action: 'intent_classified', status: 'done' },
+    { at: now, actor: 'Foreman', action: 'workflow_selected', status: 'done' },
+    { at: now, actor: 'Foreman', action: 'task_created', status: 'done' },
+  ];
+
+  if (!bridgeUrl) {
+    steps.push({ at: now, actor: 'AppBridge', action: 'local_only_no_receiver_configured', status: 'skipped' });
+  } else if (dispatch.sent) {
+    steps.push({ at: now, actor: 'AppBridge', action: 'task_dispatched', status: 'done' });
+    steps.push({ at: ack && ack.receivedAt ? ack.receivedAt : now, actor: 'ReceiverApp', action: 'acknowledged_task', status: 'done' });
+  } else {
+    steps.push({ at: now, actor: 'AppBridge', action: 'dispatch_failed', status: 'needs_attention' });
+  }
+
+  if (task.escalation.required) {
+    steps.push({ at: now, actor: 'Foreman', action: 'human_review_required', status: 'needs_attention' });
+  }
+
+  return steps;
+}
+
 function getBridgeStatus() {
   return {
     configured: Boolean(bridgeUrl),
@@ -66,11 +98,15 @@ const html = `<!doctype html>
     .pill { display: inline-flex; padding: 6px 9px; border-radius: 999px; background: #202839; color: #dce8f7; font-size: 12px; font-weight: 900; }
     .pill.ok { color: var(--accent); }
     .pill.warn { color: var(--warn); }
+    .pill.danger { color: var(--danger); }
     .warn { color: var(--warn); }
     .danger { color: var(--danger); }
     .steps { margin: 10px 0 0; padding-left: 20px; color: #cbd6e5; }
+    .timeline { display: grid; gap: 8px; margin: 12px 0; }
+    .timeline-step { border: 1px solid var(--line); border-radius: 14px; padding: 10px; background: #0d1118; }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     pre { white-space: pre-wrap; background: #0d1118; border: 1px solid var(--line); padding: 12px; border-radius: 14px; color: #dce8f7; }
+    code { color: #dce8f7; }
     .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
     .flow div { border: 1px solid var(--line); background: rgba(16,21,31,.8); border-radius: 16px; padding: 13px; color: #dce8f7; font-weight: 800; }
     .examples { display: grid; gap: 8px; margin-top: 12px; }
@@ -122,6 +158,9 @@ const html = `<!doctype html>
     const form = document.getElementById('requestForm');
     const tasksEl = document.getElementById('tasks');
     const bridgeEl = document.getElementById('bridgeStatus');
+    function escapeHtml(value){ return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char])); }
+    function safeStatusClass(status){ return status === 'needs_attention' ? 'danger' : status === 'skipped' ? 'warn' : 'ok'; }
+    function receiverAck(dispatch){ return dispatch && dispatch.response && dispatch.response.body && dispatch.response.body.received ? dispatch.response.body.received : null; }
     document.querySelectorAll('[data-example]').forEach(btn => btn.addEventListener('click', () => {
       const data = examples[btn.dataset.example];
       form.customerName.value = data.customerName;
@@ -131,26 +170,36 @@ const html = `<!doctype html>
     async function loadBridgeStatus(){
       const res = await fetch('/api/app-bridge/status');
       const data = await res.json();
+      const ack = receiverAck(data.lastDispatch);
       bridgeEl.innerHTML = `
         <p>Status: <strong class="${data.configured ? 'warn' : ''}">${data.configured ? 'Connected' : 'Local only'}</strong></p>
-        <p>Target: <code>${data.target || 'not configured'}</code></p>
+        <p>Target: <code>${escapeHtml(data.target || 'not configured')}</code></p>
         <p>Last dispatch: <strong>${data.lastDispatch ? (data.lastDispatch.sent ? 'sent' : 'failed/local') : 'none yet'}</strong></p>
+        <p>Receiver ack: <strong>${ack ? 'received' : 'none yet'}</strong></p>
+        ${ack ? `<p>Receiver event: <code>${escapeHtml(ack.eventId)}</code></p>` : ''}
       `;
     }
     async function loadTasks(){ const res = await fetch('/api/tasks'); const data = await res.json(); renderTasks(data.tasks); await loadBridgeStatus(); }
     function renderTasks(tasks){
       if(!tasks.length){ tasksEl.innerHTML = '<p>No requests yet. Send one from ROSE intake.</p>'; return; }
-      tasksEl.innerHTML = tasks.map(task => `
+      tasksEl.innerHTML = tasks.map(task => {
+        const ack = receiverAck(task.dispatch);
+        return `
         <article class="task">
-          <div class="row"><span class="pill">${task.id}</span><span class="pill ok">${task.workflow.label}</span><span class="pill ${task.escalation.required ? 'warn' : 'ok'}">Confidence: ${Math.round(task.confidence * 100)}%</span></div>
-          <strong>${task.customerName}</strong><p>${task.message}</p>
-          <p>Status: <strong class="${task.escalation.required ? 'warn' : ''}">${task.status}</strong></p>
-          <p>Owner: <strong>${task.workflow.owner}</strong></p>
-          <p>Escalation: <strong class="${task.escalation.required ? 'danger' : ''}">${task.escalation.required ? 'Human review required' : 'Not required'}</strong> — ${task.escalation.reason}</p>
-          <p>App bridge: <strong>${task.dispatch.sent ? 'Sent' : 'Local only'}</strong> — ${task.dispatch.reason || 'Webhook accepted task'}</p>
-          <ol class="steps">${task.workflow.steps.map(step => `<li>${step}</li>`).join('')}</ol>
-          <div class="split"><div><h3>Email Preview</h3><pre>${task.notificationPreview.email}</pre></div><div><h3>WhatsApp Preview</h3><pre>${task.notificationPreview.whatsapp}</pre></div></div>
-        </article>`).join('');
+          <div class="row"><span class="pill">${escapeHtml(task.id)}</span><span class="pill ok">${escapeHtml(task.workflow.label)}</span><span class="pill ${task.escalation.required ? 'warn' : 'ok'}">Confidence: ${Math.round(task.confidence * 100)}%</span></div>
+          <strong>${escapeHtml(task.customerName)}</strong><p>${escapeHtml(task.message)}</p>
+          <p>Status: <strong class="${task.escalation.required ? 'warn' : ''}">${escapeHtml(task.status)}</strong></p>
+          <p>Owner: <strong>${escapeHtml(task.workflow.owner)}</strong></p>
+          <p>Escalation: <strong class="${task.escalation.required ? 'danger' : ''}">${task.escalation.required ? 'Human review required' : 'Not required'}</strong> — ${escapeHtml(task.escalation.reason)}</p>
+          <p>App bridge: <strong>${task.dispatch.sent ? 'Sent' : 'Local only'}</strong> — ${escapeHtml(task.dispatch.reason || 'Receiver accepted task')}</p>
+          <p>Receiver acknowledgement: <strong class="${ack ? 'ok' : 'warn'}">${ack ? 'Received by connected app' : 'No receiver acknowledgement yet'}</strong></p>
+          ${ack ? `<p>Receiver event ID: <code>${escapeHtml(ack.eventId)}</code></p>` : ''}
+          <h3>Live workflow timeline</h3>
+          <div class="timeline">${task.lifecycle.map(step => `<div class="timeline-step"><span class="pill ${safeStatusClass(step.status)}">${escapeHtml(step.status)}</span> <strong>${escapeHtml(step.actor)}</strong>: ${escapeHtml(step.action)}<br><small>${escapeHtml(step.at)}</small></div>`).join('')}</div>
+          <ol class="steps">${task.workflow.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+          <div class="split"><div><h3>Email Preview</h3><pre>${escapeHtml(task.notificationPreview.email)}</pre></div><div><h3>WhatsApp Preview</h3><pre>${escapeHtml(task.notificationPreview.whatsapp)}</pre></div></div>
+        </article>`;
+      }).join('');
     }
     form.addEventListener('submit', async event => { event.preventDefault(); const payload = Object.fromEntries(new FormData(form).entries()); await fetch('/api/requests', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }); await loadTasks(); });
     loadTasks();
@@ -171,6 +220,7 @@ http.createServer(async (req, res) => {
       const task = createTask(body);
       const dispatch = await sendToExternalApp(task).catch(error => ({ sent: false, reason: error.message }));
       task.dispatch = dispatch;
+      task.lifecycle = buildTaskLifecycle(task, dispatch);
       dispatches.unshift({ taskId: task.id, ...dispatch });
       tasks.unshift(task);
       return sendJson(res, 201, { ok: true, task, dispatch });
