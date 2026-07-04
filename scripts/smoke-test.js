@@ -1,5 +1,10 @@
 const assert = require('assert');
-const { createTask, detectIntent } = require('../packages/foreman-core');
+const {
+  createTask,
+  createTaskWithProvider,
+  detectIntent,
+  classifyWithProvider,
+} = require('../packages/foreman-core');
 const { CONTRACT_VERSION, createBridgeEnvelope, sendToExternalApp } = require('../packages/app-bridge');
 
 (async () => {
@@ -13,6 +18,29 @@ const { CONTRACT_VERSION, createBridgeEnvelope, sendToExternalApp } = require('.
   assert.strictEqual(eventTask.workflow.owner, 'Events Team');
   assert.ok(eventTask.confidence >= 0.7, 'event task should have useful confidence');
   assert.ok(eventTask.notificationPreview.email.includes('ROSE'));
+  assert.strictEqual(eventTask.classifier.provider, 'rules');
+  assert.strictEqual(eventTask.classifier.fallbackUsed, true);
+
+  const providerFallbackDecision = await classifyWithProvider({
+    customerName: 'Fallback Demo',
+    channel: 'website',
+    message: 'We need an automation dashboard and WhatsApp follow-up workflow.',
+  }, { provider: 'fireworks', apiKey: '' });
+
+  assert.strictEqual(providerFallbackDecision.provider, 'rules');
+  assert.strictEqual(providerFallbackDecision.fallbackUsed, true);
+  assert.ok(providerFallbackDecision.fallbackReason.includes('Missing Fireworks API key'));
+
+  const providerTask = await createTaskWithProvider({
+    customerName: 'Provider Fallback Demo',
+    channel: 'website',
+    message: 'We need an automation dashboard and WhatsApp follow-up workflow.',
+  }, { provider: 'fireworks', apiKey: '' });
+
+  assert.strictEqual(providerTask.classifier.provider, 'rules');
+  assert.strictEqual(providerTask.classifier.fallbackUsed, true);
+  assert.ok(providerTask.classifier.fallbackReason.includes('Missing Fireworks API key'));
+  assert.strictEqual(providerTask.workflow.owner, 'Automation Team');
 
   const urgentTask = createTask({
     customerName: 'Urgent Client',
@@ -74,12 +102,16 @@ const { CONTRACT_VERSION, createBridgeEnvelope, sendToExternalApp } = require('.
     configured: false,
     target: null,
     tokenConfigured: false,
+    aiProvider: 'mock',
+    fireworksConfigured: false,
     lastDispatch: null,
   };
 
   assert.strictEqual(typeof statusShape.configured, 'boolean');
   assert.strictEqual(statusShape.target, null);
   assert.strictEqual(typeof statusShape.tokenConfigured, 'boolean');
+  assert.strictEqual(statusShape.aiProvider, 'mock');
+  assert.strictEqual(typeof statusShape.fireworksConfigured, 'boolean');
 
   console.log('Hunter Foreman smoke test passed');
 })().catch(error => {
