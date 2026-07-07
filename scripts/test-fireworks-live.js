@@ -19,6 +19,8 @@
 
 const { classifyWithProvider, VALID_INTENTS } = require('../packages/foreman-core');
 
+const VERIFIED_FIREWORKS_MODEL = 'accounts/fireworks/models/gpt-oss-120b';
+
 const CASES = [
   {
     label: 'Event booking clear intent',
@@ -138,7 +140,7 @@ async function runCase(testCase, index) {
   }
 
   console.log(`Using base URL: ${process.env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1'}`);
-  console.log(`Using model: ${process.env.FIREWORKS_MODEL || 'accounts/fireworks/models/llama-v3p1-8b-instruct'}`);
+  console.log(`Using model: ${process.env.FIREWORKS_MODEL || VERIFIED_FIREWORKS_MODEL}`);
   console.log(`API key present: yes (${apiKey.slice(0, 4)}...${apiKey.slice(-4)})`);
 
   const results = [];
