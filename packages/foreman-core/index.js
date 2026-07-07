@@ -42,8 +42,9 @@ const WORKFLOWS = {
 };
 
 const VALID_INTENTS = Object.keys(WORKFLOWS);
-const DEFAULT_FIREWORKS_MODEL = 'accounts/fireworks/models/llama-v3p1-8b-instruct';
+const DEFAULT_FIREWORKS_MODEL = 'accounts/fireworks/models/gpt-oss-120b';
 const DEFAULT_FIREWORKS_BASE_URL = 'https://api.fireworks.ai/inference/v1';
+const ESCALATION_TERMS = ['urgent', 'legal', 'payment', 'refund', 'complaint', 'angry', 'sensitive', 'private', 'owner'];
 
 function normalizeText(value) {
   return String(value || '').trim();
@@ -66,8 +67,13 @@ function scoreConfidence(intent, message) {
   return Math.max(0.35, Math.min(0.94, Number(score.toFixed(2))));
 }
 
+function hasEscalationTerm(message) {
+  const value = normalizeText(message).toLowerCase();
+  return ESCALATION_TERMS.some(term => value.includes(term));
+}
+
 function needsEscalation(intent, confidence, message) {
-  return confidence < 0.68 || /urgent|legal|payment|refund|complaint|angry|sensitive|private|owner/i.test(message);
+  return confidence < 0.68 || hasEscalationTerm(message);
 }
 
 function classifyWithRules(input) {
