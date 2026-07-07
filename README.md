@@ -123,6 +123,16 @@ See `docs/app-bridge-runbook.md`.
 - No client data.
 - Demo data only.
 
+## Related Project
+
+Hunter Foreman also influenced the creation of **Sergeant** — an independent AI reviewer designed to inspect implementations rather than generate them.
+
+While building, reviewing, and validating Hunter Foreman, the same engineering workflow evolved into a separate review system. Hunter Foreman became the first real-world project used to shape Sergeant's review workflow, while established open-source projects were later used to validate and refine its review process.
+
+If you're interested in the engineering review approach behind this project, you can explore Sergeant here:
+
+https://github.com/jaydumisuni/Sergeant
+
 ## Project Status
 
 Phase 1 public demo implementation connected to optional app bridge.
