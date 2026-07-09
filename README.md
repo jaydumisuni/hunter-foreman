@@ -200,15 +200,32 @@ Hunter Foreman follows a simple engineering philosophy:
 
 The repository includes a proof package containing:
 
-- Live screenshots
-- Demo walkthrough
-- API verification
+- Clean WebP screenshots of all major tabs
+- A readable WebP demo walkthrough
 - Fireworks classification evidence
-- Test results
-- Node syntax checks
+- API health output
+- App Bridge status output
+- Task state after the UI demo
+- UI state capture
+- Smoke test output
 - Docker Compose config validation
-- Git state
 - SHA256 checksums
+
+Key proof files:
+
+```text
+proof/demo-walkthrough.webp
+proof/screenshots/
+proof/fireworks-classification-proof.json
+proof/api-health.json
+proof/api-app-bridge-status.json
+proof/api-tasks-after-ui-demo.json
+proof/ui-state.json
+proof/npm-test-fallback.txt
+proof/docker-compose-config.txt
+proof/SHA256SUMS.txt
+proof/capture-brave-screenshots.js
+```
 
 The goal is for every significant implementation claim to be backed by reproducible evidence.
 

@@ -1,0 +1,5 @@
+
+> hunter-foreman@0.1.0 test
+> node scripts/smoke-test.js
+
+Hunter Foreman smoke test passed

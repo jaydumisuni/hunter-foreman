@@ -1,0 +1,154 @@
+{
+  "tasks": [
+    {
+      "id": "HF-MRDCZKS0",
+      "createdAt": "2026-07-09T10:23:28.752Z",
+      "customerName": "Chilanga Mulilo Client",
+      "channel": "website",
+      "message": "We need event booking, digital invitations, guest tickets, QR check-in and a clear approval flow.",
+      "intent": "event_booking",
+      "confidence": 0.84,
+      "classifier": {
+        "provider": "rules",
+        "fallbackUsed": true,
+        "fallbackReason": null,
+        "summary": "Rule-based fallback classification used for local demo safety."
+      },
+      "workflow": {
+        "label": "Event Booking Workflow",
+        "owner": "Events Team",
+        "steps": [
+          "Confirm event type and date",
+          "Prepare invite/ticket setup",
+          "Prepare QR check-in plan",
+          "Send human review summary"
+        ]
+      },
+      "status": "ready_to_assign",
+      "escalation": {
+        "required": false,
+        "reason": "High enough confidence for normal workflow"
+      },
+      "notificationPreview": {
+        "email": "Hi Chilanga Mulilo Client, ROSE received your request and Hunter Foreman routed it to Events Team. We will follow up shortly.",
+        "whatsapp": "Hi Chilanga Mulilo Client, ROSE received your request. Hunter Foreman routed it to Events Team. Status: ready to assign."
+      },
+      "dispatch": {
+        "sent": false,
+        "reason": "FOREMAN_APP_WEBHOOK_URL not configured"
+      },
+      "receiverState": {
+        "state": "not_connected",
+        "label": "Not connected",
+        "detail": "Receiver app is not configured for this run."
+      },
+      "lifecycle": [
+        {
+          "at": "2026-07-09T10:23:28.752Z",
+          "actor": "ROSE",
+          "action": "request_received",
+          "status": "done"
+        },
+        {
+          "at": "2026-07-09T10:23:28.752Z",
+          "actor": "Rules fallback",
+          "action": "intent_classified",
+          "status": "done"
+        },
+        {
+          "at": "2026-07-09T10:23:28.752Z",
+          "actor": "Hunter Foreman",
+          "action": "task_created",
+          "status": "done"
+        },
+        {
+          "at": "2026-07-09T10:23:28.752Z",
+          "actor": "App Bridge",
+          "action": "not_configured",
+          "status": "skipped"
+        },
+        {
+          "at": "2026-07-09T10:23:28.752Z",
+          "actor": "Receiver",
+          "action": "not_connected",
+          "status": "skipped"
+        }
+      ]
+    },
+    {
+      "id": "HF-MRDCZAOR",
+      "createdAt": "2026-07-09T10:23:15.675Z",
+      "customerName": "Chilanga Mulilo Client",
+      "channel": "website",
+      "message": "We need event booking, digital invitations, guest tickets, QR check-in and a clear approval flow.",
+      "intent": "event_booking",
+      "confidence": 0.84,
+      "classifier": {
+        "provider": "rules",
+        "fallbackUsed": true,
+        "fallbackReason": null,
+        "summary": "Rule-based fallback classification used for local demo safety."
+      },
+      "workflow": {
+        "label": "Event Booking Workflow",
+        "owner": "Events Team",
+        "steps": [
+          "Confirm event type and date",
+          "Prepare invite/ticket setup",
+          "Prepare QR check-in plan",
+          "Send human review summary"
+        ]
+      },
+      "status": "ready_to_assign",
+      "escalation": {
+        "required": false,
+        "reason": "High enough confidence for normal workflow"
+      },
+      "notificationPreview": {
+        "email": "Hi Chilanga Mulilo Client, ROSE received your request and Hunter Foreman routed it to Events Team. We will follow up shortly.",
+        "whatsapp": "Hi Chilanga Mulilo Client, ROSE received your request. Hunter Foreman routed it to Events Team. Status: ready to assign."
+      },
+      "dispatch": {
+        "sent": false,
+        "reason": "FOREMAN_APP_WEBHOOK_URL not configured"
+      },
+      "receiverState": {
+        "state": "not_connected",
+        "label": "Not connected",
+        "detail": "Receiver app is not configured for this run."
+      },
+      "lifecycle": [
+        {
+          "at": "2026-07-09T10:23:15.676Z",
+          "actor": "ROSE",
+          "action": "request_received",
+          "status": "done"
+        },
+        {
+          "at": "2026-07-09T10:23:15.676Z",
+          "actor": "Rules fallback",
+          "action": "intent_classified",
+          "status": "done"
+        },
+        {
+          "at": "2026-07-09T10:23:15.676Z",
+          "actor": "Hunter Foreman",
+          "action": "task_created",
+          "status": "done"
+        },
+        {
+          "at": "2026-07-09T10:23:15.676Z",
+          "actor": "App Bridge",
+          "action": "not_configured",
+          "status": "skipped"
+        },
+        {
+          "at": "2026-07-09T10:23:15.676Z",
+          "actor": "Receiver",
+          "action": "not_connected",
+          "status": "skipped"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+name: hunter-foreman
+services:
+  hunter-foreman:
+    build:
+      context: D:\projects\hunter-foreman
+      dockerfile: Dockerfile
+    container_name: hunter-foreman-demo
+    environment:
+      AI_API_KEY: ""
+      AI_PROVIDER: mock
+      APP_ENV: demo
+      APP_NAME: Hunter Foreman
+      EMAIL_PROVIDER: mock
+      FIREWORKS_API_KEY: ""
+      FIREWORKS_BASE_URL: https://api.fireworks.ai/inference/v1
+      FIREWORKS_MODEL: accounts/fireworks/models/gpt-oss-120b
+      FOREMAN_APP_TOKEN: ""
+      FOREMAN_APP_WEBHOOK_URL: ""
+      PORT: "3000"
+      WHATSAPP_PROVIDER: mock
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "3000"
+        protocol: tcp
+networks:
+  default:
+    name: hunter-foreman_default

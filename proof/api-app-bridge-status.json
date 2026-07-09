@@ -1,0 +1,18 @@
+{
+  "configured": false,
+  "target": null,
+  "aiProvider": "mock",
+  "fireworksConfigured": true,
+  "model": "accounts/fireworks/models/gpt-oss-120b",
+  "taskCount": 2,
+  "lastDispatch": {
+    "taskId": "HF-MRDCZKS0",
+    "receiverState": {
+      "state": "not_connected",
+      "label": "Not connected",
+      "detail": "Receiver app is not configured for this run."
+    },
+    "sent": false,
+    "reason": "FOREMAN_APP_WEBHOOK_URL not configured"
+  }
+}

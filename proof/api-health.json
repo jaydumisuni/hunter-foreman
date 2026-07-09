@@ -1,0 +1,6 @@
+{
+  "ok": true,
+  "service": "hunter-foreman-demo",
+  "appBridge": false,
+  "aiProvider": "mock"
+}

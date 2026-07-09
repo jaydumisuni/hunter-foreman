@@ -1,0 +1,10 @@
+{
+  "title": "AI OPERATIONS FOREMAN",
+  "activeTab": "overview",
+  "hasSidebarLogo": true,
+  "hasHeaderLogo": false,
+  "kpiRequests": "1",
+  "fireworksState": "CONFIGURED",
+  "bridgeState": "DEMO ONLY",
+  "receiverState": "NOT CONNECTED"
+}

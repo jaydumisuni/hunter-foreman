@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-07-09T10:24:30.733Z",
+  "providerRequested": "fireworks",
+  "apiKeyConfigured": true,
+  "model": "accounts/fireworks/models/gpt-oss-120b",
+  "results": [
+    {
+      "case": "event-booking",
+      "intent": "event_booking",
+      "confidence": 0.94,
+      "provider": "fireworks",
+      "fallbackUsed": false,
+      "fallbackReason": null,
+      "summary": "Customer requests event booking services including digital invitations, guest tickets, QR check-in, and approval workflow."
+    },
+    {
+      "case": "business-automation",
+      "intent": "business_automation",
+      "confidence": 0.94,
+      "provider": "fireworks",
+      "fallbackUsed": false,
+      "fallbackReason": null,
+      "summary": "Customer wants an AI receptionist, dashboard workflow routing, and WhatsApp follow-up process."
+    },
+    {
+      "case": "urgent-escalation",
+      "intent": "general_request",
+      "confidence": 0.86,
+      "provider": "fireworks",
+      "fallbackUsed": false,
+      "fallbackReason": null,
+      "summary": "Customer urgently requests owner review before any payment discussion."
+    }
+  ]
+}
