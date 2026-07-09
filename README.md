@@ -1,138 +1,266 @@
 # Hunter Foreman
 
-AI operations foreman for small businesses — routes requests, escalates tasks, and coordinates workflows across web, email, WhatsApp, and dashboards.
+> AI-powered business operations orchestration.
 
-## Hackathon Focus
+ROSE receives customer requests. Fireworks AI understands intent. Hunter Foreman creates structured ownership. Connected business applications execute the work.
 
-Hunter Foreman is the public hackathon edition of the Hunter architecture. It demonstrates how a business request can move from ROSE, the AI receptionist, into routing, task creation, dashboard visibility, notification previews, optional app dispatch, and human escalation.
+**One request. One owner. Complete visibility.**
 
-This repository is intentionally public-safe. It does **not** include private THETECHGUY repair engines, proprietary recovery workflows, private credentials, private prompts, client data, or internal production logic.
+| Category | Summary |
+| --- | --- |
+| Purpose | AI-powered business operations orchestration |
+| AI | Fireworks AI for intent understanding and classification |
+| Frontend | ROSE AI Receptionist plus live operations dashboard |
+| Backend | Hunter Foreman task ownership engine and App Bridge |
+| Output | Structured business tasks, ownership, and workflow visibility |
+| Status | Working demo with evidence-backed proof |
 
-## Three-Repo Phase 1 Map
+---
 
-- Core app: `jaydumisuni/hunter-foreman`
-- Demo receiver: `jaydumisuni/hunter-foreman-demo`
-- Submission pack: `jaydumisuni/hunter-foreman-docs`
+## The Problem
 
-Review the three repositories together before the break/test phase.
+Businesses receive customer requests through websites, email, WhatsApp, social media, staff members, and walk-ins.
 
-## Phase 1 Demo
+Without structured ownership, requests can be forgotten, duplicated, delayed, or handled by the wrong person.
+
+Hunter Foreman is designed to make every request immediately become owned, traceable work.
+
+---
+
+## The Solution
+
+Hunter Foreman is an AI operations foreman for business workflows.
+
+It starts with ROSE, an AI receptionist interface for request intake. Fireworks AI classifies the request and identifies the likely workflow. Hunter Foreman then creates a structured task that can be tracked on the dashboard and dispatched through the App Bridge to connected business applications.
+
+The goal is not to replace people. The goal is to make sure work is understood, assigned, visible, and followed through.
+
+---
+
+## Workflow
 
 ```text
-Customer request
-    ↓
-ROSE receptionist intake
-    ↓
-Hunter Foreman request analyzer
-    ↓
-Intent + confidence
-    ↓
-Workflow + task creation
-    ↓
-Dashboard update
-    ↓
-Email / WhatsApp preview
-    ↓
-Optional app bridge dispatch
-    ↓
-Human escalation when needed
+Customer
+   │
+   ▼
+ROSE AI Receptionist
+   │
+   ▼
+Fireworks AI
+Intent Understanding
+   │
+   ▼
+Hunter Foreman
+Task Ownership Engine
+   │
+   ▼
+Operations Dashboard
+   │
+   ▼
+App Bridge
+   │
+   ▼
+Connected Business Applications
 ```
 
-## Repository Layout
+---
+
+## Fireworks AI Integration
+
+Fireworks AI performs semantic understanding of incoming customer requests.
+
+It is responsible for:
+
+- intent classification,
+- workflow recommendation,
+- confidence scoring,
+- escalation detection,
+- returning structured output that Hunter Foreman can turn into business work.
+
+Hunter Foreman then converts the AI result into a task with ownership, lifecycle information, dashboard visibility, and optional App Bridge dispatch.
+
+The verified live model used for the Fireworks proof is:
+
+```text
+accounts/fireworks/models/gpt-oss-120b
+```
+
+The project also keeps fallback behavior explicit so the demo can continue safely if provider credentials are not configured.
+
+---
+
+## Why Hunter Foreman?
+
+Hunter Foreman is not another AI chatbot.
+
+Most AI demos end with a conversation. Hunter Foreman begins with one.
+
+The conversation is only the entry point. The objective is ensuring work is understood, owned, tracked, and delivered across business operations.
+
+---
+
+## Available Today
+
+- ROSE AI Receptionist interface.
+- Fireworks-backed request classification.
+- Rule-based fallback for demo safety.
+- Structured task ownership.
+- Live operations dashboard.
+- Request log.
+- Task board.
+- Analytics view.
+- System health view.
+- App Bridge status tracking.
+- Resettable demo workflow.
+- Regional settings, currency, timezone, language, and preferences.
+- Honest integration states for planned or unavailable modules.
+
+---
+
+## Planned / Intentionally Not Connected Yet
+
+These are shown as planned, under maintenance, or not connected in the demo rather than presented as finished production integrations.
+
+- WhatsApp automation.
+- Payment gateway connection.
+- Event Manager connector.
+- Invitation System connector.
+- QR Access connector.
+- Multi-business deployment.
+- Additional production App Bridge receivers.
+
+This is intentional: planned business modules are visible for product direction, but unfinished integrations are not presented as live.
+
+---
+
+## Engineering Principles
+
+Hunter Foreman follows a simple engineering standard:
+
+- Understand the objective before changing code.
+- Claims must match implementation.
+- Planned functionality must be clearly identified.
+- AI decisions should remain observable.
+- Fallback behavior should be explicit.
+- Evidence should accompany demonstrations.
+- Business workflows take priority over chat interactions.
+
+---
+
+## Repository Structure
 
 ```text
 apps/
-  demo/                 Public demo web app and API
+  demo/                 Local demo server and browser UI
 packages/
-  foreman-core/         Public-safe routing and task logic
-  app-bridge/           Optional external app bridge
-scripts/                Smoke tests
-docs/                   Architecture, API, bridge, and submission notes
-docker-compose.yml      Judge-friendly container startup
-docker-compose.connected.yml  Two-app local demo startup
-Dockerfile              Demo container
-.env.example            Safe environment template
-PHASE_1_LOCK.md         Locked scope
-EXTRACTION_MATRIX.md    Public/shared/private extraction map
+  foreman-core/         Classification, routing, task creation
+  app-bridge/           Dispatch boundary for external apps
+scripts/                Smoke tests and live provider checks
+docs/                   Supporting documentation
+proof/                  Local evidence runs and generated proof packages
 ```
 
-## Run with Docker
+---
 
-```bash
-docker compose up --build
-```
-
-Open:
-
-```text
-http://localhost:3000
-```
-
-## Run Connected Two-App Demo
-
-Place `hunter-foreman` and `hunter-foreman-demo` beside each other, then run from this repo:
-
-```bash
-docker compose -f docker-compose.connected.yml up --build
-```
-
-Open:
-
-```text
-http://localhost:3000
-http://localhost:3100
-```
-
-See `docs/connected-local-run.md`.
-
-## Run locally
+## Quick Start
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Test
+Open:
+
+```text
+http://localhost:3000
+```
+
+Run the smoke tests:
 
 ```bash
 npm test
 ```
 
-## Public API
+Check the demo server syntax:
 
-- `GET /health`
-- `POST /api/requests`
-- `GET /api/tasks`
-- `GET /api/dispatch/:taskId`
-- `GET /api/app-bridge/status`
+```bash
+node --check apps/demo/server.js
+```
 
-See `docs/app-connection-api.md` and `docs/app-bridge-contract.md`.
+---
 
-## App Bridge
+## Fireworks Live Test
 
-Hunter Foreman can dispatch created tasks to the separate receiver app using the versioned `foreman.app.task.v1` contract.
+Set a Fireworks API key and model, then run the live provider check.
 
-See `docs/app-bridge-runbook.md`.
+```bash
+set FIREWORKS_MODEL=accounts/fireworks/models/gpt-oss-120b
+node scripts/test-fireworks-live.js
+```
 
-## Public Safety Rules
+Expected evidence from a successful run:
 
-- No secrets in the repository.
-- No private Hunter production logic.
-- No device repair or unlock modules.
-- No private prompts.
-- No client data.
-- Demo data only.
+```text
+provider=fireworks
+fallbackUsed=false
+```
 
-## Related Project
+Do not commit API keys or provider secrets.
 
-Hunter Foreman also influenced the creation of **Sergeant** — an independent AI reviewer designed to inspect implementations rather than generate them.
+---
 
-While building, reviewing, and validating Hunter Foreman, the same engineering workflow evolved into a separate review system. Hunter Foreman became the first real-world project used to shape Sergeant's review workflow, while established open-source projects were later used to validate and refine its review process.
+## Verification
 
-If you're interested in the engineering review approach behind this project, you can explore Sergeant here:
+The project is prepared around evidence-backed claims. A proof run can capture:
 
-https://github.com/jaydumisuni/Sergeant
+- screenshots of all major tabs,
+- a demo walkthrough GIF,
+- API health output,
+- App Bridge status output,
+- task state after a demo request,
+- Fireworks classification proof,
+- test results,
+- Node syntax checks,
+- Docker Compose config validation,
+- git state,
+- SHA256 checksums.
 
-## Project Status
+The proof folder is used as evidence for submission packaging and final review.
 
-Phase 1 public demo implementation connected to optional app bridge.
+---
+
+## Related Projects
+
+Building Hunter Foreman also led to **Sergeant**, an independent AI implementation reviewer focused on inspecting software implementations rather than generating them.
+
+Hunter Foreman served as the first project used to shape and validate that review workflow.
+
+Sergeant: https://github.com/jaydumisuni/Sergeant
+
+---
+
+## Roadmap
+
+### Current
+
+Working AI operations demo with ROSE intake, Fireworks classification, task ownership, dashboard visibility, and proof artifacts.
+
+### Business Integrations
+
+Connect real WhatsApp, payment, event, invitation, QR access, and business-specific application receivers.
+
+### Platform Expansion
+
+Move toward multi-business deployment, stronger App Bridge contracts, additional AI providers, and production-grade monitoring.
+
+---
+
+## About THETECHGUY DIGITAL SOLUTIONS
+
+Hunter Foreman is developed by **THETECHGUY DIGITAL SOLUTIONS**, a Zambian software engineering business focused on practical business automation, repair tools, AI systems, and connected software platforms.
+
+---
+
+## License
+
+License details should be reviewed before public production use.
