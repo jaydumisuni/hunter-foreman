@@ -1,24 +1,29 @@
 name: One-time repository status alignment
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - .github/workflows/one-time-status-alignment.yml
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   align-and-prove:
+    if: github.head_ref == 'align-public-demo-statuses'
     runs-on: ubuntu-latest
     steps:
-      - name: Check out main
+      - name: Check out pull request branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
+          token: ${{ github.token }}
 
       - name: Align repository demo labels and add regression test
         shell: bash
@@ -142,22 +147,23 @@ jobs:
           grep -q 'Dashboard Hub' /tmp/hunter-foreman.html
           grep -q '>Planned<' /tmp/hunter-foreman.html
 
-      - name: Commit aligned repository state
+      - name: Commit aligned repository state to pull request branch
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add apps/demo/server.js scripts/status-label-test.js package.json
           git commit -m 'Align existing integration labels with public demo boundary [skip ci]'
-          git push origin HEAD:main
+          git push origin HEAD:${{ github.head_ref }}
 
-      - name: Prove the pushed commit from a fresh clone
+      - name: Prove the pushed branch from a fresh clone
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           rm -rf /tmp/hunter-foreman-fresh
-          git clone --branch main --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-fresh
+          git clone --branch "$HEAD_BRANCH" --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-fresh
           cd /tmp/hunter-foreman-fresh
           npm test
           node --check apps/demo/server.js
