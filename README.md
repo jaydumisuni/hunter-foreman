@@ -231,19 +231,20 @@ The goal is for every significant implementation claim to be backed by reproduci
 
 ---
 
-## Related Projects
+## Related Repositories
 
-Building Hunter Foreman also led to the creation of **Sergeant**.
+Hunter Foreman is presented through three public repositories, with Sergeant documented as the supporting engineering reviewer:
 
-Sergeant is an independent AI implementation reviewer focused on inspecting software implementations rather than generating them.
+- **[hunter-foreman](https://github.com/jaydumisuni/hunter-foreman)** — main application, ROSE intake, Fireworks classification, task ownership, dashboard, App Bridge, Docker setup, and proof artifacts.
+- **[hunter-foreman-demo](https://github.com/jaydumisuni/hunter-foreman-demo)** — connected demo receiver that accepts versioned App Bridge task events and proves the workflow can leave the main application.
+- **[hunter-foreman-docs](https://github.com/jaydumisuni/hunter-foreman-docs)** — judge-facing submission pack, architecture notes, demo guidance, pitch material, and cross-repository proof documentation.
+- **[Sergeant](https://github.com/jaydumisuni/Sergeant)** — independent AI implementation reviewer shaped and validated through Hunter Foreman, focused on claims, documentation, code, runtime behavior, and evidence before release.
 
-Hunter Foreman served as the first project used to shape and validate Sergeant's review workflow.
+Building Hunter Foreman led directly to the creation of Sergeant, and Hunter Foreman served as the first real project used to shape and validate its review workflow.
 
 <p align="center">
   <img src="docs/assets/sergeant-hero.webp" alt="SGT Sergeant — open-source engineering reviewer" width="100%">
 </p>
-
-Sergeant: https://github.com/jaydumisuni/Sergeant
 
 ---
 
