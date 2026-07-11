@@ -1,0 +1,178 @@
+name: One-time repository status alignment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/one-time-status-alignment.yml
+
+permissions:
+  contents: write
+
+jobs:
+  align-and-prove:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Align repository demo labels and add regression test
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          server_path = Path('apps/demo/server.js')
+          text = server_path.read_text(encoding='utf-8')
+
+          replacements = {
+              'Event Manager': 'Existing THETECHGUY Events system; its private production connection is excluded from this public demo.',
+              'Invitation System': 'Existing invitation workflow; client-facing data and production services are not connected here.',
+              'QR Access': 'Existing guest-access and QR check-in workflow; excluded from the public runtime.',
+              'WhatsApp Bot': 'Existing private business workflow; credentials, approvals, and client conversations remain outside this release.',
+              'Payment Gateway': 'Existing payment, referral, and commission workflow; transaction services and credentials are excluded from the public demo.',
+          }
+
+          card_pattern = r'<(?:div|article) class="app-card[^"]*"[^>]*>'
+
+          def bounds_for(name, source):
+              idx = source.find(name)
+              if idx < 0:
+                  raise SystemExit(f'Missing app card title: {name}')
+              starts = [m.start() for m in re.finditer(card_pattern, source)]
+              start = max((s for s in starts if s <= idx), default=-1)
+              if start < 0:
+                  raise SystemExit(f'Could not locate app-card start for {name}')
+              end = min((s for s in starts if s > idx), default=len(source))
+              return start, end
+
+          for name, description in replacements.items():
+              start, end = bounds_for(name, text)
+              segment = text[start:end]
+
+              status_pattern = re.compile(r'<span class="badge[^"]*">(?:Planned|Under maintenance|Not connected)</span>')
+              segment, status_count = status_pattern.subn('<span class="badge pending">Not connected</span>', segment, count=1)
+              if status_count != 1:
+                  raise SystemExit(f'Expected exactly one editable status badge for {name}; found {status_count}')
+
+              title_pos = segment.find(name)
+              p_start = segment.find('<p>', title_pos)
+              p_end = segment.find('</p>', p_start)
+              if p_start < 0 or p_end < 0:
+                  raise SystemExit(f'Could not locate description paragraph for {name}')
+              segment = segment[:p_start] + '<p>' + description + '</p>' + segment[p_end + 4:]
+              text = text[:start] + segment + text[end:]
+
+          for name in ('Dashboard Hub', 'Add New App'):
+              start, end = bounds_for(name, text)
+              if '>Planned<' not in text[start:end]:
+                  raise SystemExit(f'{name} must remain Planned')
+
+          server_path.write_text(text, encoding='utf-8')
+
+          Path('scripts/status-label-test.js').write_text(r'''const assert = require('assert');
+          const fs = require('fs');
+          const path = require('path');
+
+          const source = fs.readFileSync(path.join(__dirname, '..', 'apps', 'demo', 'server.js'), 'utf8');
+
+          function cardFor(name) {
+            const index = source.indexOf(name);
+            assert.notStrictEqual(index, -1, `Missing app card: ${name}`);
+            const starts = [...source.matchAll(/<(?:div|article) class="app-card[^"]*"[^>]*>/g)].map(match => match.index);
+            const start = Math.max(...starts.filter(value => value <= index));
+            const following = starts.filter(value => value > index);
+            const end = following.length ? Math.min(...following) : source.length;
+            return source.slice(start, end);
+          }
+
+          const disconnected = {
+            'Event Manager': 'Existing THETECHGUY Events system;',
+            'Invitation System': 'Existing invitation workflow;',
+            'QR Access': 'Existing guest-access and QR check-in workflow;',
+            'WhatsApp Bot': 'Existing private business workflow;',
+            'Payment Gateway': 'Existing payment, referral, and commission workflow;',
+          };
+
+          for (const [name, expectedText] of Object.entries(disconnected)) {
+            const card = cardFor(name);
+            assert.ok(card.includes('>Not connected<'), `${name} must show Not connected`);
+            assert.ok(!card.includes('>Planned<'), `${name} must not show Planned`);
+            assert.ok(!card.includes('>Under maintenance<'), `${name} must not show Under maintenance`);
+            assert.ok(card.includes(expectedText), `${name} must explain the public-demo boundary`);
+          }
+
+          for (const name of ['Dashboard Hub', 'Add New App']) {
+            assert.ok(cardFor(name).includes('>Planned<'), `${name} must remain Planned`);
+          }
+
+          console.log('Hunter Foreman integration status label test passed');
+          ''', encoding='utf-8')
+
+          package_path = Path('package.json')
+          package = json.loads(package_path.read_text(encoding='utf-8'))
+          status_command = 'node scripts/status-label-test.js'
+          if status_command not in package['scripts']['test']:
+              package['scripts']['test'] += ' && ' + status_command
+          package_path.write_text(json.dumps(package, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Test changed checkout
+        shell: bash
+        run: |
+          npm test
+          node --check apps/demo/server.js
+          docker compose config >/tmp/docker-compose-config.txt
+          node apps/demo/server.js >/tmp/hunter-foreman.log 2>&1 &
+          APP_PID=$!
+          trap 'kill $APP_PID 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/ >/tmp/hunter-foreman.html; then break; fi
+            sleep 1
+          done
+          grep -q 'Event Manager' /tmp/hunter-foreman.html
+          grep -q '>Not connected<' /tmp/hunter-foreman.html
+          grep -q 'Existing payment, referral, and commission workflow' /tmp/hunter-foreman.html
+          grep -q 'Dashboard Hub' /tmp/hunter-foreman.html
+          grep -q '>Planned<' /tmp/hunter-foreman.html
+
+      - name: Commit aligned repository state
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/demo/server.js scripts/status-label-test.js package.json
+          git commit -m 'Align existing integration labels with public demo boundary [skip ci]'
+          git push origin HEAD:main
+
+      - name: Prove the pushed commit from a fresh clone
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf /tmp/hunter-foreman-fresh
+          git clone --branch main --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-fresh
+          cd /tmp/hunter-foreman-fresh
+          npm test
+          node --check apps/demo/server.js
+          docker compose config >/tmp/fresh-docker-compose-config.txt
+          docker build -t hunter-foreman-status-proof .
+          docker run -d --rm --name hunter-foreman-status-proof -p 3010:3000 hunter-foreman-status-proof
+          trap 'docker rm -f hunter-foreman-status-proof 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3010/ >/tmp/fresh-hunter-foreman.html; then break; fi
+            sleep 1
+          done
+          grep -q 'Event Manager' /tmp/fresh-hunter-foreman.html
+          grep -q '>Not connected<' /tmp/fresh-hunter-foreman.html
+          grep -q 'Existing THETECHGUY Events system' /tmp/fresh-hunter-foreman.html
+          grep -q 'Existing payment, referral, and commission workflow' /tmp/fresh-hunter-foreman.html
+          grep -q 'Dashboard Hub' /tmp/fresh-hunter-foreman.html
+          grep -q '>Planned<' /tmp/fresh-hunter-foreman.html
+          echo "Fresh clone verified at $(git rev-parse HEAD)"
