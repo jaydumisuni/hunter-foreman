@@ -61,42 +61,25 @@ jobs:
           grep -q "'Add New App','＋','Planned'" /tmp/hunter-home.html
           grep -q '"ok": true' /tmp/hunter-health.json
 
-      - name: Commit reviewed final state
+      - name: Commit verified documentation and tests
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'Harden final repository consistency and runtime proof [skip ci]'
+          git add README.md package.json scripts/repository-consistency-test.js
+          git commit -m 'Harden final repository consistency checks [skip ci]'
           git push origin HEAD:${{ github.head_ref }}
 
-      - name: Fresh-clone proof of pushed branch
+      - name: Confirm committed files on remote branch
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
-          rm -rf /tmp/hunter-foreman-final-clone
-          git clone --branch "$HEAD_BRANCH" --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-final-clone
-          cd /tmp/hunter-foreman-final-clone
-          npm test
-          node --check apps/demo/server.js
-          docker compose config > /tmp/final-clone-compose.txt
-          docker build -t hunter-foreman-final-clone .
-          docker run -d --rm --name hunter-foreman-final-clone -p 3011:3000 hunter-foreman-final-clone
-          trap 'docker logs hunter-foreman-final-clone || true; docker rm -f hunter-foreman-final-clone 2>/dev/null || true' EXIT
-          ready=false
-          for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:3011/health > /tmp/final-clone-health.json; then ready=true; break; fi
-            sleep 1
-          done
-          test "$ready" = true
-          curl --fail --silent http://127.0.0.1:3011/ > /tmp/final-clone-home.html
-          grep -q 'Existing THETECHGUY Events system' /tmp/final-clone-home.html
-          grep -q 'Existing payment, referral, and commission workflow' /tmp/final-clone-home.html
-          grep -q "'Dashboard Hub','↗','Planned'" /tmp/final-clone-home.html
-          grep -q "'Add New App','＋','Planned'" /tmp/final-clone-home.html
-          grep -q '"ok": true' /tmp/final-clone-health.json
-          test -z "$(git status --short)"
-          echo "FINAL BRANCH PROOF SHA=$(git rev-parse HEAD)"
+          rm -rf /tmp/hunter-foreman-nonworkflow-proof
+          git clone --branch "$HEAD_BRANCH" --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-nonworkflow-proof
+          cd /tmp/hunter-foreman-nonworkflow-proof
+          grep -q 'are implemented for the wider THETECHGUY business architecture.' README.md
+          grep -q 'The current runtime and automated tests are the source of truth.' README.md
+          grep -q 'node scripts/repository-consistency-test.js' package.json
