@@ -1,11 +1,10 @@
-name: One-time repository status alignment
+name: One-time repository status diagnostics
 
 on:
   pull_request:
     branches:
       - main
     types:
-      - opened
       - reopened
       - synchronize
 
@@ -14,7 +13,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  align-and-prove:
+  capture:
     if: github.head_ref == 'align-public-demo-statuses'
     runs-on: ubuntu-latest
     steps:
@@ -26,157 +25,53 @@ jobs:
           token: ${{ github.token }}
           show-progress: false
 
-      - name: Align repository demo labels and add regression test
+      - name: Capture relevant source windows
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import json
           import re
 
-          server_path = Path('apps/demo/server.js')
-          text = server_path.read_text(encoding='utf-8')
+          source = Path('apps/demo/server.js').read_text(encoding='utf-8')
+          names = [
+              'Event Manager',
+              'Invitation System',
+              'QR Access',
+              'WhatsApp Bot',
+              'Payment Gateway',
+              'Pay Gateway',
+              'Dashboard Hub',
+              'Add New App',
+          ]
 
-          replacements = {
-              'Event Manager': 'Existing THETECHGUY Events system; its private production connection is excluded from this public demo.',
-              'Invitation System': 'Existing invitation workflow; client-facing data and production services are not connected here.',
-              'QR Access': 'Existing guest-access and QR check-in workflow; excluded from the public runtime.',
-              'WhatsApp Bot': 'Existing private business workflow; credentials, approvals, and client conversations remain outside this release.',
-              'Payment Gateway': 'Existing payment, referral, and commission workflow; transaction services and credentials are excluded from the public demo.',
-          }
+          lines = []
+          for name in names:
+              index = source.find(name)
+              lines.append(f'===== {name} | index={index} =====')
+              if index >= 0:
+                  start = max(0, index - 300)
+                  end = min(len(source), index + 1000)
+                  snippet = source[start:end]
+                  snippet = snippet.replace('\r', '').replace('\n', '\\n')
+                  lines.append(snippet)
+              lines.append('')
 
-          def nearby(name, source, width=1400):
-              idx = source.find(name)
-              if idx < 0:
-                  raise SystemExit(f'Missing visible app title: {name}')
-              return idx, source[idx:idx + width]
+          lines.append('===== STATUS OCCURRENCES =====')
+          for match in re.finditer(r'Planned|Under maintenance|Not connected', source):
+              start = max(0, match.start() - 180)
+              end = min(len(source), match.end() + 260)
+              snippet = source[start:end].replace('\r', '').replace('\n', '\\n')
+              lines.append(f'-- {match.group(0)} at {match.start()} --')
+              lines.append(snippet)
 
-          for name, description in replacements.items():
-              idx, window = nearby(name, text)
-
-              status = re.search(
-                  r'<(?P<tag>span|div)(?P<attrs>[^>]*class="[^"]*badge[^"]*"[^>]*)>(?P<label>Planned|Under maintenance|Not connected)</(?P=tag)>',
-                  window,
-              )
-              if not status:
-                  raise SystemExit(f'No editable status badge found near {name}')
-
-              status_start = idx + status.start()
-              status_end = idx + status.end()
-              replacement_badge = '<span class="badge pending">Not connected</span>'
-              text = text[:status_start] + replacement_badge + text[status_end:]
-
-              idx, window = nearby(name, text)
-              paragraph = re.search(r'<p>.*?</p>', window, flags=re.DOTALL)
-              if not paragraph:
-                  raise SystemExit(f'No description paragraph found near {name}')
-              p_start = idx + paragraph.start()
-              p_end = idx + paragraph.end()
-              text = text[:p_start] + '<p>' + description + '</p>' + text[p_end:]
-              print(f'{name}: {status.group("label")} -> Not connected')
-
-          for name in ('Dashboard Hub', 'Add New App'):
-              _, window = nearby(name, text)
-              if not re.search(r'>Planned<', window):
-                  raise SystemExit(f'{name} must remain Planned')
-              print(f'{name}: remains Planned')
-
-          server_path.write_text(text, encoding='utf-8')
-
-          Path('scripts/status-label-test.js').write_text(r'''const assert = require('assert');
-          const fs = require('fs');
-          const path = require('path');
-
-          const source = fs.readFileSync(path.join(__dirname, '..', 'apps', 'demo', 'server.js'), 'utf8');
-
-          function windowFor(name, width = 1400) {
-            const index = source.indexOf(name);
-            assert.notStrictEqual(index, -1, `Missing visible app title: ${name}`);
-            return source.slice(index, index + width);
-          }
-
-          const disconnected = {
-            'Event Manager': 'Existing THETECHGUY Events system;',
-            'Invitation System': 'Existing invitation workflow;',
-            'QR Access': 'Existing guest-access and QR check-in workflow;',
-            'WhatsApp Bot': 'Existing private business workflow;',
-            'Payment Gateway': 'Existing payment, referral, and commission workflow;',
-          };
-
-          for (const [name, expectedText] of Object.entries(disconnected)) {
-            const window = windowFor(name);
-            assert.ok(window.includes('>Not connected<'), `${name} must show Not connected`);
-            assert.ok(!window.includes('>Planned<'), `${name} must not show Planned`);
-            assert.ok(!window.includes('>Under maintenance<'), `${name} must not show Under maintenance`);
-            assert.ok(window.includes(expectedText), `${name} must explain the public-demo boundary`);
-          }
-
-          for (const name of ['Dashboard Hub', 'Add New App']) {
-            assert.ok(windowFor(name).includes('>Planned<'), `${name} must remain Planned`);
-          }
-
-          console.log('Hunter Foreman integration status label test passed');
-          ''', encoding='utf-8')
-
-          package_path = Path('package.json')
-          package = json.loads(package_path.read_text(encoding='utf-8'))
-          status_command = 'node scripts/status-label-test.js'
-          if status_command not in package['scripts']['test']:
-              package['scripts']['test'] += ' && ' + status_command
-          package_path.write_text(json.dumps(package, indent=2) + '\n', encoding='utf-8')
+          Path('status-card-diagnostics.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
 
-      - name: Test changed checkout
-        shell: bash
-        run: |
-          npm test
-          node --check apps/demo/server.js
-          docker compose config >/tmp/docker-compose-config.txt
-          node apps/demo/server.js >/tmp/hunter-foreman.log 2>&1 &
-          APP_PID=$!
-          trap 'kill $APP_PID 2>/dev/null || true' EXIT
-          for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:3000/ >/tmp/hunter-foreman.html; then break; fi
-            sleep 1
-          done
-          grep -q 'Event Manager' /tmp/hunter-foreman.html
-          grep -q '>Not connected<' /tmp/hunter-foreman.html
-          grep -q 'Existing payment, referral, and commission workflow' /tmp/hunter-foreman.html
-          grep -q 'Dashboard Hub' /tmp/hunter-foreman.html
-          grep -q '>Planned<' /tmp/hunter-foreman.html
-
-      - name: Commit aligned repository state to pull request branch
+      - name: Commit diagnostics to pull request branch
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add apps/demo/server.js scripts/status-label-test.js package.json
-          git commit -m 'Align existing integration labels with public demo boundary [skip ci]'
+          git add status-card-diagnostics.txt
+          git commit -m 'Capture app status source diagnostics [skip ci]'
           git push origin HEAD:${{ github.head_ref }}
-
-      - name: Prove the pushed branch from a fresh clone
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          rm -rf /tmp/hunter-foreman-fresh
-          git clone --branch "$HEAD_BRANCH" --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-fresh
-          cd /tmp/hunter-foreman-fresh
-          npm test
-          node --check apps/demo/server.js
-          docker compose config >/tmp/fresh-docker-compose-config.txt
-          docker build -t hunter-foreman-status-proof .
-          docker run -d --rm --name hunter-foreman-status-proof -p 3010:3000 hunter-foreman-status-proof
-          trap 'docker rm -f hunter-foreman-status-proof 2>/dev/null || true' EXIT
-          for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:3010/ >/tmp/fresh-hunter-foreman.html; then break; fi
-            sleep 1
-          done
-          grep -q 'Event Manager' /tmp/fresh-hunter-foreman.html
-          grep -q '>Not connected<' /tmp/fresh-hunter-foreman.html
-          grep -q 'Existing THETECHGUY Events system' /tmp/fresh-hunter-foreman.html
-          grep -q 'Existing payment, referral, and commission workflow' /tmp/fresh-hunter-foreman.html
-          grep -q 'Dashboard Hub' /tmp/fresh-hunter-foreman.html
-          grep -q '>Planned<' /tmp/fresh-hunter-foreman.html
-          echo "Fresh clone verified at $(git rev-parse HEAD)"
