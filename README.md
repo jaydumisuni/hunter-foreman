@@ -6,7 +6,13 @@
   <strong>Live Demo:</strong> <a href="https://hunter-foreman.thetechguyds.com">hunter-foreman.thetechguyds.com</a>
 </p>
 
-<p align="center"><em>The diagram presents Hunter Foreman’s complete operating model; the “Current Demo” panel and live application identify the functionality implemented in this hackathon release.</em></p>
+<p align="center">
+  <strong>Business Ecosystem:</strong> <a href="https://thetechguyds.com">thetechguyds.com</a> · <a href="https://events.thetechguyds.com">events.thetechguyds.com</a>
+</p>
+
+<p align="center"><em>The hero presents Hunter Foreman inside the operating THETECHGUY DIGITAL SOLUTIONS ecosystem. The business and Events URLs represent real production-facing platforms whose workflows informed this implementation. The “Current Demo” panel and live application identify the public hackathon boundary.</em></p>
+
+<p align="center"><em>Capabilities completed and verified in this demo are completed for the wider business architecture; remaining work is business rollout, private configuration, and safe connection to existing production systems—not feature planning or rebuilding.</em></p>
 
 # Hunter Foreman
 
@@ -107,23 +113,45 @@ Its purpose is ensuring work is understood, owned, tracked, and delivered across
 - System Health
 - Demo reset workflow
 - Regional settings, currency, timezone, language, and preferences
-- Honest integration states for planned or unavailable modules
+- Honest public-demo, business-rollout, private-integration, and connection states
+
+These capabilities were completed and verified through the hackathon implementation and are considered implemented for the wider THETECHGUY business architecture.
 
 ---
 
-## Planned / Intentionally Not Connected Yet
+## Business Implementation and Public Demo Boundary
 
-These are shown as planned, under maintenance, or not connected in the demo rather than presented as finished production integrations.
+Hunter Foreman was developed as both a public hackathon submission and a completion path for core THETECHGUY DIGITAL SOLUTIONS operations. The public demo is therefore not a throwaway prototype: it is the verified implementation surface for capabilities that will be rolled into the main business environment.
 
-- WhatsApp automation
-- Payment Gateway
-- Event Manager connector
-- Invitation System connector
-- QR Access connector
-- Multi-business deployment
-- Additional production App Bridge receivers
+### Implemented and Verified Through Hunter Foreman
 
-This is intentional: planned business modules are visible for product direction, but unfinished integrations are not presented as live.
+The completed public implementation includes request intake, Fireworks-backed classification, deterministic fallback, structured task ownership, lifecycle visibility, dashboard state, analytics, system health, regional settings, the App Bridge contract, and connected-receiver proof.
+
+These capabilities do not need to be planned or rebuilt for the business. The remaining work is deployment, configuration, and rollout into the main operating environment.
+
+### Operational Elsewhere — Intentionally Not Connected Here
+
+The broader THETECHGUY ecosystem already supports real client and business workflows across:
+
+- Events operations
+- Digital invitations
+- Guest access and QR check-in
+- Payment handling
+- Referral tracking
+- Commission workflows
+- Private WhatsApp business flows
+
+These production-facing systems are intentionally excluded from the public hackathon runtime because connecting them would require private credentials, client records, transaction information, and internal infrastructure.
+
+**Not connected in this public demo does not mean unbuilt.** It means the public release preserves a safe boundary around existing business systems.
+
+### Business Rollout
+
+The next business step is to apply the completed Hunter Foreman implementation to the main THETECHGUY environment, configure private services, and connect existing operational systems through approved App Bridge adapters.
+
+### Further Expansion
+
+Multi-business deployment, additional client-specific receivers, deeper reasoning workflows, and production-scale monitoring remain expansion work beyond the completed core business implementation.
 
 ---
 
@@ -171,7 +199,7 @@ Structured ownership view showing work separated into To Do, In Progress, Pendin
 
 ### Connected Apps
 
-App Bridge view showing which business modules are demo-ready, planned, under maintenance, or not connected.
+App Bridge view showing which business modules are demo-ready, planned, under maintenance, or not connected. These screenshot labels capture the submitted public-demo state; the business implementation boundary is clarified above so “not connected” is not mistaken for “unbuilt.”
 
 ![Connected Apps](proof/screenshots/05-connected-apps.webp)
 
@@ -200,7 +228,7 @@ System health view showing provider state, App Bridge status, receiver status, l
 Hunter Foreman follows a simple engineering philosophy:
 
 - Claims match implementation.
-- Planned functionality is clearly identified.
+- Release, rollout, private-integration, and public-demo boundaries are clearly identified.
 - Evidence accompanies demonstrations.
 - AI decisions remain observable.
 - Fallback behavior is explicit.
@@ -262,17 +290,17 @@ Building Hunter Foreman led directly to the creation of Sergeant, and Hunter For
 
 ## Roadmap
 
-### Current
+### Implemented and Verified
 
-Working AI operations demo with ROSE intake, Fireworks classification, task ownership, dashboard visibility, and proof artifacts.
+ROSE intake, Fireworks classification, deterministic fallback, task ownership, dashboard visibility, request history, task board, analytics, system health, App Bridge contract, receiver proof, Docker startup, and proof artifacts.
 
-### Business Integrations
+### Business Rollout
 
-Connect real WhatsApp, payment, event, invitation, QR access, and business-specific application receivers.
+Apply the completed implementation to the main THETECHGUY operating environment, configure private services, and connect existing Events, invitation, QR, payment, referral, commission, and WhatsApp workflows safely.
 
 ### Platform Expansion
 
-Move toward multi-business deployment, stronger App Bridge contracts, additional AI providers, and production-grade monitoring.
+Extend the completed foundation toward multi-business deployment, additional client-specific receivers, stronger App Bridge contracts, deeper AI workflows, and production-grade monitoring.
 
 ---
 
@@ -340,7 +368,9 @@ Do not commit API keys or provider secrets.
 
 ## About THETECHGUY DIGITAL SOLUTIONS
 
-Hunter Foreman is developed by **THETECHGUY DIGITAL SOLUTIONS**, a Zambian software engineering business focused on practical business automation, repair tools, AI systems, and connected software platforms.
+Hunter Foreman is developed by **THETECHGUY DIGITAL SOLUTIONS**, an operating Zambian software engineering business serving real clients across technology, business automation, and digital Events services.
+
+The broader business ecosystem already includes production-facing Events, invitation, QR access, payment, referral, commission, and private communication workflows. Hunter Foreman completes the orchestration layer that will be rolled across those systems while keeping private client and transaction data outside this public repository.
 
 ---
 
