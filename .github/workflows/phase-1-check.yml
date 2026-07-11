@@ -9,7 +9,7 @@ on:
 
 jobs:
   smoke-test:
-    name: Smoke test
+    name: Smoke and consistency tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,15 +23,46 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run smoke test
+      - name: Run repository tests
         run: npm test
 
-  docker-build:
-    name: Docker build
+      - name: Check demo server syntax
+        run: node --check apps/demo/server.js
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config
+
+  docker-runtime:
+    name: Docker build and runtime proof
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t hunter-foreman-demo .
+        run: docker build -t hunter-foreman-final-proof .
+
+      - name: Start and verify container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --rm --name hunter-foreman-final-proof -p 3010:3000 hunter-foreman-final-proof
+          trap 'docker logs hunter-foreman-final-proof || true; docker rm -f hunter-foreman-final-proof 2>/dev/null || true' EXIT
+
+          ready=false
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3010/health > /tmp/hunter-health.json; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = true
+
+          curl --fail --silent http://127.0.0.1:3010/ > /tmp/hunter-home.html
+          grep -q 'Hunter Foreman' /tmp/hunter-home.html
+          grep -q 'Existing THETECHGUY Events system' /tmp/hunter-home.html
+          grep -q 'Existing payment, referral, and commission workflow' /tmp/hunter-home.html
+          grep -q "'Dashboard Hub','↗','Planned'" /tmp/hunter-home.html
+          grep -q "'Add New App','＋','Planned'" /tmp/hunter-home.html
+          grep -q '"ok": true' /tmp/hunter-health.json
