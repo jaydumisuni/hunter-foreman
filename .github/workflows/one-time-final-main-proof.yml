@@ -1,24 +1,29 @@
 name: One-time final main proof
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - .github/workflows/one-time-final-main-proof.yml
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   finalize-and-prove:
+    if: github.head_ref == 'final-main-hardening'
     runs-on: ubuntu-latest
     steps:
-      - name: Check out current main
+      - name: Check out proof branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
+          token: ${{ github.token }}
 
       - name: Apply final consistency hardening
         shell: bash
@@ -105,6 +110,7 @@ jobs:
             '.github/workflows/one-time-status-alignment.yml',
             '.github/workflows/app-status-alignment.yml',
             'status-card-diagnostics.txt',
+            'FINAL_MAIN_PROOF_TRIGGER.txt',
           ];
           for (const file of temporaryFiles) {
             assert.strictEqual(exists(file), false, `Temporary proof file must not remain: ${file}`);
@@ -210,9 +216,12 @@ jobs:
                     grep -q "'Add New App','＋','Planned'" /tmp/hunter-home.html
                     grep -q '"ok": true' /tmp/hunter-health.json
           '''
-          # Remove the indentation introduced by this workflow's YAML block.
           phase_workflow = '\n'.join(line[10:] if line.startswith('          ') else line for line in phase_workflow.splitlines()) + '\n'
           Path('.github/workflows/phase-1-check.yml').write_text(phase_workflow, encoding='utf-8')
+
+          trigger = Path('FINAL_MAIN_PROOF_TRIGGER.txt')
+          if trigger.exists():
+              trigger.unlink()
           PY
 
       - name: Review changed scope
@@ -221,7 +230,7 @@ jobs:
           set -euo pipefail
           git diff --check
           git diff -- README.md package.json scripts/repository-consistency-test.js .github/workflows/phase-1-check.yml
-          test "$(git diff --name-only | sort | tr '\n' ' ')" = ".github/workflows/phase-1-check.yml README.md package.json scripts/repository-consistency-test.js "
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = ".github/workflows/phase-1-check.yml FINAL_MAIN_PROOF_TRIGGER.txt README.md package.json scripts/repository-consistency-test.js "
 
       - name: Test completed working tree
         shell: bash
@@ -246,23 +255,24 @@ jobs:
           grep -q "'Add New App','＋','Planned'" /tmp/hunter-home.html
           grep -q '"ok": true' /tmp/hunter-health.json
 
-      - name: Commit final hardening
+      - name: Commit final hardening to proof branch
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add README.md package.json scripts/repository-consistency-test.js .github/workflows/phase-1-check.yml
+          git add -A README.md package.json scripts/repository-consistency-test.js .github/workflows/phase-1-check.yml FINAL_MAIN_PROOF_TRIGGER.txt
           git commit -m 'Harden final repository consistency and runtime proof [skip ci]'
-          git push origin HEAD:main
+          git push origin HEAD:${{ github.head_ref }}
 
-      - name: Prove pushed main from a fresh clone
+      - name: Prove pushed branch from a fresh clone
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
           rm -rf /tmp/hunter-foreman-final-clone
-          git clone --branch main --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-final-clone
+          git clone --branch "$HEAD_BRANCH" --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-final-clone
           cd /tmp/hunter-foreman-final-clone
 
           npm test
@@ -287,4 +297,4 @@ jobs:
           grep -q '"ok": true' /tmp/final-clone-health.json
 
           test -z "$(git status --short)"
-          echo "FINAL MAIN PROOF SHA=$(git rev-parse HEAD)"
+          echo "FINAL BRANCH PROOF SHA=$(git rev-parse HEAD)"
