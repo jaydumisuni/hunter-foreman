@@ -135,6 +135,12 @@ A clean walkthrough of Hunter Foreman showing the request moving from ROSE intak
   <img src="proof/demo-walkthrough.webp" alt="Hunter Foreman clean demo walkthrough showing ROSE intake, request creation, task board, connected apps, analytics, settings, and system health" width="100%">
 </p>
 
+### Hunter Voice Narration
+
+The official presentation video is narrated using **Hunter’s internal voice system**, demonstrating that Hunter Foreman was built and presented as part of a broader reusable AI ecosystem rather than as an isolated demo.
+
+The narration is a presentation-layer integration. It is not claimed as a Hunter Foreman runtime capability in this public release.
+
 ---
 
 ## Screenshots
