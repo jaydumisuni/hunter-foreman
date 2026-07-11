@@ -2,6 +2,10 @@
   <img src="docs/assets/hunter-foreman-hero.webp" alt="Hunter Foreman — AI-powered business operations orchestration" width="100%">
 </p>
 
+<p align="center">
+  <strong>Live Demo:</strong> <a href="https://hunter-foreman.thetechguyds.com">hunter-foreman.thetechguyds.com</a>
+</p>
+
 # Hunter Foreman
 
 > AI-powered business operations orchestration.
