@@ -1,1 +1,0 @@
-Temporary diagnostic captured the compact integration status array. This file is removed automatically by the alignment proof workflow.
