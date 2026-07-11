@@ -115,7 +115,7 @@ Its purpose is ensuring work is understood, owned, tracked, and delivered across
 - Regional settings, currency, timezone, language, and preferences
 - Honest public-demo, business-rollout, private-integration, and connection states
 
-These capabilities were completed and verified through the hackathon implementation and are considered implemented for the wider THETECHGUY business architecture.
+These capabilities were completed and verified through the hackathon implementation and are implemented for the wider THETECHGUY business architecture.
 
 ---
 
@@ -199,7 +199,7 @@ Structured ownership view showing work separated into To Do, In Progress, Pendin
 
 ### Connected Apps
 
-App Bridge view showing which business modules are demo-ready, planned, under maintenance, or not connected. These screenshot labels capture the submitted public-demo state; the business implementation boundary is clarified above so “not connected” is not mistaken for “unbuilt.”
+This screenshot preserves the recorded submission-state labels. The current repository runtime uses **Not connected** for existing business systems excluded from the public demo, and **Planned** only for genuine future expansion items. The current runtime and automated tests are the source of truth.
 
 ![Connected Apps](proof/screenshots/05-connected-apps.webp)
 
