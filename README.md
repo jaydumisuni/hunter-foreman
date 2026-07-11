@@ -6,6 +6,8 @@
   <strong>Live Demo:</strong> <a href="https://hunter-foreman.thetechguyds.com">hunter-foreman.thetechguyds.com</a>
 </p>
 
+<p align="center"><em>The diagram presents Hunter Foreman’s complete operating model; the “Current Demo” panel and live application identify the functionality implemented in this hackathon release.</em></p>
+
 # Hunter Foreman
 
 > AI-powered business operations orchestration.
