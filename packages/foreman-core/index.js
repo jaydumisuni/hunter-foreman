@@ -162,7 +162,10 @@ async function classifyWithProvider(input, options = {}) {
     return { ...fallbackDecision, fallbackReason: `Unsupported AI_PROVIDER '${provider}'` };
   }
 
-  const apiKey = normalizeText(options.apiKey || process.env.FIREWORKS_API_KEY || process.env.AI_API_KEY);
+  const apiKeySource = Object.prototype.hasOwnProperty.call(options, 'apiKey')
+    ? options.apiKey
+    : process.env.FIREWORKS_API_KEY || process.env.AI_API_KEY;
+  const apiKey = normalizeText(apiKeySource);
   if (!apiKey) return { ...fallbackDecision, fallbackReason: 'Missing Fireworks API key' };
 
   try {
