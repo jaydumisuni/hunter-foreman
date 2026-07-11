@@ -1,0 +1,86 @@
+name: Verify rewritten main
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  literal-main-clone:
+    if: github.head_ref == 'verify-clean-main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone exact main branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/hunter-foreman-clean-main
+          git clone --branch main --single-branch "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" /tmp/hunter-foreman-clean-main
+          cd /tmp/hunter-foreman-clean-main
+          test "$(git branch --show-current)" = "main"
+          test "$(git rev-parse HEAD)" = "43ef6d3b42e67c9eef3aa8ef8de8e2e210acb404"
+          test -z "$(git status --short)"
+
+      - name: Install without mutating the clone
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/hunter-foreman-clean-main
+          npm install --no-package-lock
+          test -z "$(git status --short)"
+
+      - name: Run all repository gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/hunter-foreman-clean-main
+          npm test
+          node --check apps/demo/server.js
+          docker compose config > /tmp/clean-main-compose.txt
+          test -z "$(git status --short)"
+
+      - name: Build and run the exact main container
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/hunter-foreman-clean-main
+          docker build -t hunter-foreman-clean-main .
+          docker run -d --rm --name hunter-foreman-clean-main -p 3013:3000 hunter-foreman-clean-main
+          trap 'docker logs hunter-foreman-clean-main || true; docker rm -f hunter-foreman-clean-main 2>/dev/null || true' EXIT
+
+          ready=false
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3013/health > /tmp/clean-main-health.json; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = true
+
+          curl --fail --silent http://127.0.0.1:3013/ > /tmp/clean-main-home.html
+          grep -q 'Hunter Foreman' /tmp/clean-main-home.html
+          grep -q 'Existing THETECHGUY Events system' /tmp/clean-main-home.html
+          grep -q 'Existing payment, referral, and commission workflow' /tmp/clean-main-home.html
+          grep -q "'Dashboard Hub','↗','Planned'" /tmp/clean-main-home.html
+          grep -q "'Add New App','＋','Planned'" /tmp/clean-main-home.html
+          grep -q '"ok": true' /tmp/clean-main-health.json
+
+      - name: Confirm clean release tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/hunter-foreman-clean-main
+          test ! -e .github/workflows/verify-clean-main.yml
+          test ! -e .github/workflows/one-time-final-main-proof.yml
+          test ! -e .github/workflows/one-time-literal-clone-proof.yml
+          test ! -e FINAL_MAIN_PROOF_TRIGGER.txt
+          test ! -e status-card-diagnostics.txt
+          test ! -e scripts/finalize-main.py
+          test -z "$(git status --short)"
