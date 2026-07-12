@@ -2,7 +2,7 @@
   "name": "hunter-foreman",
   "version": "0.1.0",
   "private": false,
-  "description": "AI operations foreman for small businesses.",
+  "description": "AI operations foreman for real businesses, from small teams to growing operations.",
   "scripts": {
     "dev": "node apps/demo/server.js",
     "start": "node apps/demo/server.js",
