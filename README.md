@@ -137,6 +137,7 @@ The broader THETECHGUY ecosystem already supports real client and business workf
 - Digital invitations
 - Guest access and QR check-in
 - Payment handling
+- Browser-based POS operations
 - Referral tracking
 - Commission workflows
 - Private WhatsApp business flows
@@ -147,7 +148,7 @@ These production-facing systems are intentionally excluded from the public hacka
 
 ### Business Rollout
 
-The next business step is to apply the completed Hunter Foreman implementation to the main THETECHGUY environment, configure private services, and connect existing operational systems through approved App Bridge adapters.
+The next business step is to apply the completed Hunter Foreman implementation to the main THETECHGUY environment, configure private services, and connect existing Events, invitation, QR, payment, POS, referral, commission, and WhatsApp workflows through approved App Bridge adapters.
 
 ### Further Expansion
 
@@ -296,7 +297,7 @@ ROSE intake, Fireworks classification, deterministic fallback, task ownership, d
 
 ### Business Rollout
 
-Apply the completed implementation to the main THETECHGUY operating environment, configure private services, and connect existing Events, invitation, QR, payment, referral, commission, and WhatsApp workflows safely.
+Apply the completed implementation to the main THETECHGUY operating environment, configure private services, and connect existing Events, invitation, QR, payment, POS, referral, commission, and WhatsApp workflows safely.
 
 ### Platform Expansion
 
@@ -370,7 +371,7 @@ Do not commit API keys or provider secrets.
 
 Hunter Foreman is developed by **THETECHGUY DIGITAL SOLUTIONS**, an operating Zambian software engineering business serving real clients across technology, business automation, and digital Events services.
 
-The broader business ecosystem already includes production-facing Events, invitation, QR access, payment, referral, commission, and private communication workflows. Hunter Foreman completes the orchestration layer that will be rolled across those systems while keeping private client and transaction data outside this public repository.
+The broader business ecosystem already includes production-facing Events, invitation, QR access, payment, POS, referral, commission, and private communication workflows. Hunter Foreman completes the orchestration layer that will be rolled across those systems while keeping private client and transaction data outside this public repository.
 
 ---
 
