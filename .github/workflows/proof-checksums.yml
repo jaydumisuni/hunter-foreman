@@ -1,0 +1,117 @@
+name: Maintain proof checksums
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+      - docs/assets/hunter-foreman-hero.webp
+      - docs/assets/sergeant-hero.webp
+      - proof/api-app-bridge-status.json
+      - proof/api-health.json
+      - proof/api-tasks-after-ui-demo.json
+      - proof/capture-brave-screenshots.js
+      - proof/demo-walkthrough.webp
+      - proof/docker-compose-config.txt
+      - proof/fireworks-classification-proof.json
+      - proof/npm-test-fallback.txt
+      - proof/screenshots/01-overview-clean.webp
+      - proof/screenshots/02-overview-after-request.webp
+      - proof/screenshots/03-requests.webp
+      - proof/screenshots/04-task-board.webp
+      - proof/screenshots/05-connected-apps.webp
+      - proof/screenshots/06-analytics.webp
+      - proof/screenshots/07-settings.webp
+      - proof/screenshots/08-system-health.webp
+      - proof/ui-state.json
+      - .github/workflows/proof-checksums.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: proof-checksums-main
+  cancel-in-progress: false
+
+jobs:
+  regenerate-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Regenerate manifest from current files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          files=(
+            "README.md"
+            "docs/assets/hunter-foreman-hero.webp"
+            "docs/assets/sergeant-hero.webp"
+            "proof/api-app-bridge-status.json"
+            "proof/api-health.json"
+            "proof/api-tasks-after-ui-demo.json"
+            "proof/capture-brave-screenshots.js"
+            "proof/demo-walkthrough.webp"
+            "proof/docker-compose-config.txt"
+            "proof/fireworks-classification-proof.json"
+            "proof/npm-test-fallback.txt"
+            "proof/screenshots/01-overview-clean.webp"
+            "proof/screenshots/02-overview-after-request.webp"
+            "proof/screenshots/03-requests.webp"
+            "proof/screenshots/04-task-board.webp"
+            "proof/screenshots/05-connected-apps.webp"
+            "proof/screenshots/06-analytics.webp"
+            "proof/screenshots/07-settings.webp"
+            "proof/screenshots/08-system-health.webp"
+            "proof/ui-state.json"
+          )
+
+          manifest="$(mktemp)"
+
+          for file in "${files[@]}"; do
+            test -f "$file"
+            hash="$(sha256sum "$file" | awk '{print toupper($1)}')"
+            printf '%s  %s\n' "$hash" "$file" >> "$manifest"
+          done
+
+          mv "$manifest" proof/SHA256SUMS.txt
+
+      - name: Verify every manifest entry
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          while read -r expected file; do
+            actual="$(sha256sum "$file" | awk '{print toupper($1)}')"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "Checksum mismatch: $file"
+              echo "Expected: $expected"
+              echo "Actual:   $actual"
+              exit 1
+            fi
+            echo "OK: $file"
+          done < proof/SHA256SUMS.txt
+
+      - name: Commit corrected manifest when required
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- proof/SHA256SUMS.txt; then
+            echo "Manifest already matches the current main tree."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add proof/SHA256SUMS.txt
+          git commit -m "Regenerate proof checksums from current main"
+          git push origin HEAD:main
