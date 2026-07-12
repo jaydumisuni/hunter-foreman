@@ -27,6 +27,14 @@ Connected business applications execute the work.
 
 ---
 
+## Built for Real Businesses
+
+Hunter Foreman is for real businesses: **bars, restaurants, cafés, repair shops, startups, small teams, and growing teams**.
+
+It is not limited to a generic “small business” category. The same operating model can support a team at the beginning and continue serving it as its request volume, staff, connected systems, and operational complexity grow.
+
+---
+
 ## The Problem
 
 Businesses receive customer requests through websites, email, WhatsApp, social media, and staff members.
