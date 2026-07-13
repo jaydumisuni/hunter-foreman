@@ -50,17 +50,11 @@ if (!source.includes("pathname==='/api/rose'")) {
   const requestAnchor = "if(req.method==='POST'&&pathname==='/api/requests'){";
   replaceOnce(requestAnchor, "if(req.method==='POST'&&pathname==='/api/rose'){try{const body=await readBody(req);const response=await createRoseReply(body);return sendJson(res,200,response);}catch(error){return sendJson(res,400,{ok:false,error:'ROSE could not respond to that message.',detail:error.message});}}if(req.method==='POST'&&pathname==='/api/assistant-feedback'){await readBody(req).catch(()=>({}));return sendJson(res,202,{ok:true,recorded:true});}" + requestAnchor, 'ROSE endpoint anchor');
 }
-
 fs.writeFileSync(serverFile, source);
 
 const runtimeFile = path.join(__dirname, '..', 'apps', 'demo', 'public', 'rose-runtime.js');
 let runtime = fs.readFileSync(runtimeFile, 'utf8');
-const oldPos = `  function ensurePosCard(){
-    var grid=appsGridEl();if(!grid||grid.querySelector('[data-app-key="pos-system"]'))return;
-    var card=document.createElement('div');card.className='app-card';card.dataset.appKey='pos-system';
-    card.innerHTML='<div class="big">▣</div><h3>POS System</h3><span class="badge disconnected">Not connected</span><p>Existing THETECHGUY business system; intentionally not connected to this public demo. Authorised users can sign in through a supported browser on a phone, tablet or computer.</p>';grid.appendChild(card);
-  }`;
-const newPos = `  function ensurePosCard(){
+const generatedFallback = `  function ensurePosCard(){
     var grid=appsGridEl();if(!grid)return;
     var keyed=grid.querySelector('[data-app-key="pos-system"]');if(keyed)return;
     var existing=Array.prototype.find.call(grid.querySelectorAll('.app-card'),function(card){return /\\bPOS System\\b/i.test(card.textContent||'');});
@@ -68,7 +62,12 @@ const newPos = `  function ensurePosCard(){
     var card=document.createElement('div');card.className='app-card';card.dataset.appKey='pos-system';
     card.innerHTML='<div class="big">▣</div><h3>POS System</h3><span class="badge disconnected">Not connected</span><p>Existing THETECHGUY business system; intentionally not connected to this public demo. Authorised users can sign in through a supported browser on a phone, tablet or computer.</p>';grid.appendChild(card);
   }`;
-if (runtime.includes(oldPos)) runtime = runtime.replace(oldPos, newPos);
-else if (!runtime.includes("Array.prototype.find.call(grid.querySelectorAll('.app-card')")) throw new Error('Could not find POS runtime anchor');
+const authoritativeOnly = `  function ensurePosCard(){
+    var grid=appsGridEl();if(!grid)return;
+    var existing=Array.prototype.find.call(grid.querySelectorAll('.app-card'),function(card){return /\\bPOS System\\b/i.test(card.textContent||'');});
+    if(existing)existing.dataset.appKey='pos-system';
+  }`;
+if (runtime.includes(generatedFallback)) runtime = runtime.replace(generatedFallback, authoritativeOnly);
+else if (!runtime.includes('if(existing)existing.dataset.appKey')) throw new Error('Could not find current POS runtime anchor');
 fs.writeFileSync(runtimeFile, runtime);
-console.log('Applied official ROSE runtime port and POS deduplication');
+console.log('Applied official ROSE runtime port with one authoritative POS card');
