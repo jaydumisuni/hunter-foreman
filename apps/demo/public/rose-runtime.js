@@ -120,7 +120,9 @@
     appendMessage('assistant',confirmation,extra);
   }
 
-  function ensurePosCard(){}
+  function ensurePosCard(){
+    var host=window.HunterRoseHost;if(host&&typeof host.ensurePosCard==='function')host.ensurePosCard();
+  }
 
   function scheduleRestore(){
     clearTimeout(restoreTimer);restoreTimer=setTimeout(function(){ensurePosCard();if(state.started){var chat=chatEl();if(chat&&!chat.classList.contains('conversation-active'))renderConversation();var input=el('messageInput');if(input){input.placeholder='Reply to ROSE…';if(input.value===STARTER)input.value='';}if(state.taskId)showTaskId({id:state.taskId});}},0);
