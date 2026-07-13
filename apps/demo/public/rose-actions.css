@@ -3,6 +3,13 @@
 .rose-answer-block{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-width:0}
 .rose-answer-block>.bubble{margin-bottom:3px!important}
 .badge.disconnected{color:var(--o)!important}
+.rose-thinking{min-width:66px!important;width:max-content!important;padding:10px 13px!important}
+.rose-thinking-dots{display:inline-flex;align-items:center;gap:4px;min-height:12px}
+.rose-thinking-dots i{display:block;width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.28;animation:roseThinkingDot 1.05s ease-in-out infinite}
+.rose-thinking-dots i:nth-child(2){animation-delay:.14s}
+.rose-thinking-dots i:nth-child(3){animation-delay:.28s}
+@keyframes roseThinkingDot{0%,60%,100%{opacity:.28;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+@media(prefers-reduced-motion:reduce){.rose-thinking-dots i{animation:none;opacity:.7}.rose-thinking-dots i:nth-child(2){opacity:.45}.rose-thinking-dots i:nth-child(3){opacity:.25}}
 .rose-handoff{display:block;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.09);font-size:12px;line-height:1.35;color:#d7dae5}
 .rose-handoff+.rose-handoff{margin-top:6px;padding-top:0;border-top:0}
 .rose-handoff b{display:block;margin-bottom:2px;color:#ff83b2;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
