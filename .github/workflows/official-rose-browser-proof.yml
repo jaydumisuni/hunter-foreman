@@ -3,18 +3,22 @@ name: Official clone ROSE browser proof
 on:
   pull_request:
     paths:
+      - package.json
       - apps/demo/server.js
       - apps/demo/rose.js
       - apps/demo/public/**
+      - scripts/rose-service-test.js
       - scripts/official-rose-browser-proof.mjs
       - .github/workflows/official-rose-browser-proof.yml
   push:
     branches:
       - main
     paths:
+      - package.json
       - apps/demo/server.js
       - apps/demo/rose.js
       - apps/demo/public/**
+      - scripts/rose-service-test.js
       - scripts/official-rose-browser-proof.mjs
       - .github/workflows/official-rose-browser-proof.yml
   workflow_dispatch:
