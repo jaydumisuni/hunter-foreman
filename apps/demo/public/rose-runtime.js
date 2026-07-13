@@ -12,7 +12,7 @@
   function chatEl(){return el('roseChat')||document.querySelector('.rose-window .chat');}
   function appsGridEl(){return el('appsGrid')||document.querySelector('.apps-grid');}
   function getGlobal(name){try{return (0,eval)(name);}catch(error){return undefined;}}
-  function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[character];});}
+  function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];});}
 
   function parseDetails(text){
     var source=String(text||''),lower=source.toLowerCase(),details={};
