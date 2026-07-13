@@ -17,9 +17,14 @@ on:
       - apps/demo/public/**
       - scripts/official-rose-browser-proof.mjs
       - .github/workflows/official-rose-browser-proof.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: official-rose-browser-proof-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   browser-proof:
