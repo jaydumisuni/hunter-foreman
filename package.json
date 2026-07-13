@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node apps/demo/server.js",
     "start": "node apps/demo/server.js",
-    "test": "node scripts/smoke-test.js && node scripts/status-label-test.js && node scripts/repository-consistency-test.js"
+    "test": "node scripts/smoke-test.js && node scripts/status-label-test.js && node scripts/repository-consistency-test.js && node scripts/rose-service-test.js"
   },
   "license": "MIT"
 }
