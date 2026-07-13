@@ -6,6 +6,8 @@
   <strong>Live Demo:</strong> <a href="https://hunter-foreman.thetechguyds.com">hunter-foreman.thetechguyds.com</a>
 </p>
 
+<p align="center"><strong>Interactive judge experience:</strong> The screenshot-driven hub is intentionally clickable. Use its navigation, buttons, image hotspots, Hunter guide, and <strong>Launch Interactive Demo</strong>. <strong>Watch Demo</strong> is the animated preview; <strong>Launch Interactive Demo</strong> opens the working browser application without requiring a clone.</p>
+
 <p align="center">
   <strong>Business Ecosystem:</strong> <a href="https://thetechguyds.com">thetechguyds.com</a> · <a href="https://events.thetechguyds.com">events.thetechguyds.com</a>
 </p>
