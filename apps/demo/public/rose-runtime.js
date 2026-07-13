@@ -10,9 +10,9 @@
 
   function el(id){return document.getElementById(id);}
   function chatEl(){return el('roseChat')||document.querySelector('.rose-window .chat');}
-  function appsGridEl(){return el('appsGrid')||document.querySelector('.apps-grid');}
   function getGlobal(name){try{return (0,eval)(name);}catch(error){return undefined;}}
   function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];});}
+  function sleep(milliseconds){return new Promise(function(resolve){setTimeout(resolve,milliseconds);});}
 
   function parseDetails(text){
     var source=String(text||''),lower=source.toLowerCase(),details={};
@@ -55,6 +55,28 @@
     chat.appendChild(bubble);
     if(role==='assistant'&&window.HunterRoseActions)window.HunterRoseActions.decorate(bubble,text,lastQuestion);
     return bubble;
+  }
+
+  function createThinkingBubble(){
+    var chat=chatEl();if(!chat)return null;
+    var bubble=document.createElement('div');
+    bubble.className='bubble rose rose-thinking';
+    bubble.setAttribute('role','status');
+    bubble.setAttribute('aria-label','Rose is thinking');
+    var small=document.createElement('small');small.textContent='Rose';
+    var dots=document.createElement('span');dots.className='rose-thinking-dots';dots.setAttribute('aria-hidden','true');
+    for(var index=0;index<3;index+=1){var dot=document.createElement('i');dots.appendChild(dot);}
+    bubble.appendChild(small);bubble.appendChild(dots);chat.appendChild(bubble);
+    requestAnimationFrame(function(){chat.scrollTop=chat.scrollHeight;});
+    return bubble;
+  }
+
+  function removeThinkingBubble(bubble){if(bubble&&bubble.parentNode)bubble.remove();}
+
+  async function holdThinkingBubble(bubble,shownAt,minimum){
+    var elapsed=Date.now()-shownAt;
+    if(elapsed<minimum)await sleep(minimum-elapsed);
+    removeThinkingBubble(bubble);
   }
 
   function renderConversation(){
@@ -131,17 +153,46 @@
   async function send(){
     var input=el('messageInput'),button=el('sendBtn');if(!input||!button||sending)return;
     var message=input.value.trim();if(!message)return;
-    var taskAttempted=false;sending=true;state.started=true;lastQuestion=message;mergeDetails(message);input.value='';input.placeholder='Reply to ROSE…';appendMessage('user',message);renderConversation();
+    var taskAttempted=false;
+    var thinking=null;
+    var thinkingShownAt=0;
+    sending=true;state.started=true;lastQuestion=message;mergeDetails(message);input.value='';input.placeholder='Reply to ROSE…';appendMessage('user',message);renderConversation();
+    thinking=createThinkingBubble();thinkingShownAt=Date.now();
     try{
       var turn=await askRose();
-      if(!state.created&&turn.readyToCreate){appendMessage('assistant',String(turn.reply||'Thanks — I’ve got it. I’m organising your request now.'));taskAttempted=true;var task=await createTask(message);renderConversation();confirmTask(task,message);}
-      else appendMessage('assistant',String(turn.reply||'Of course — tell me what you’d like help with next.'));
+      if(!state.created&&turn.readyToCreate){
+        taskAttempted=true;
+        var task=await createTask(message);
+        renderConversation();
+        thinking=createThinkingBubble();thinkingShownAt=Date.now();
+        await holdThinkingBubble(thinking,thinkingShownAt,650);
+        confirmTask(task,message);
+      }else{
+        await holdThinkingBubble(thinking,thinkingShownAt,650);
+        appendMessage('assistant',String(turn.reply||'Of course — tell me what you’d like help with next.'));
+      }
     }catch(error){
-      console.warn(error);
-      if(!state.created&&!taskAttempted){try{taskAttempted=true;var fallbackTask=await createTask(message);appendMessage('assistant','Thanks — I’ve got your request and it has been recorded. I’m still here to help you work through the event details.');renderConversation();confirmTask(fallbackTask,message);}catch(taskError){console.warn(taskError);appendMessage('assistant','I’m sorry — I couldn’t confirm that your request was saved. Please use Reset and send the prepared request once more.');}}
-      else if(!state.created)appendMessage('assistant','I understood your request, but I couldn’t confirm that it was saved without risking a duplicate. Please use Reset before trying again.');
-      else appendMessage('assistant','I’m sorry, I couldn’t answer that just now. Your request is still saved, and you can try the question again when you’re ready.');
-    }finally{sending=false;renderConversation();var currentInput=el('messageInput');if(currentInput)currentInput.focus();}
+      console.warn(error);removeThinkingBubble(thinking);
+      if(!state.created&&!taskAttempted){
+        try{
+          taskAttempted=true;
+          var fallbackTask=await createTask(message);
+          renderConversation();
+          thinking=createThinkingBubble();thinkingShownAt=Date.now();
+          await holdThinkingBubble(thinking,thinkingShownAt,500);
+          confirmTask(fallbackTask,message);
+        }catch(taskError){
+          console.warn(taskError);removeThinkingBubble(thinking);
+          appendMessage('assistant','I’m sorry — I couldn’t confirm that your request was saved. Please use Reset and send the prepared request once more.');
+        }
+      }else if(!state.created){
+        appendMessage('assistant','I understood your request, but I couldn’t confirm that it was saved without risking a duplicate. Please use Reset before trying again.');
+      }else{
+        appendMessage('assistant','I’m sorry, I couldn’t answer that just now. Your request is still saved, and you can try the question again when you’re ready.');
+      }
+    }finally{
+      removeThinkingBubble(thinking);sending=false;renderConversation();var currentInput=el('messageInput');if(currentInput)currentInput.focus();
+    }
   }
 
   function resetConversation(){
