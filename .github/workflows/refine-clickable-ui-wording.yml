@@ -1,0 +1,48 @@
+name: Refine clickable UI wording
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/refine-clickable-ui-wording.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Replace wording and refresh checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          readme = Path('README.md')
+          text = readme.read_text(encoding='utf-8')
+          old = '<p align="center"><strong>Interactive judge experience:</strong> The screenshot-driven hub is intentionally clickable. Use its navigation, buttons, image hotspots, Hunter guide, and <strong>Launch Interactive Demo</strong>. <strong>Watch Demo</strong> is the animated preview; <strong>Launch Interactive Demo</strong> opens the working browser application without requiring a clone.</p>'
+          new = '<p align="center"><strong>Explore the live UI:</strong> The interface is fully clickable. Use the navigation, buttons, image hotspots, Hunter guide, and <strong>Launch Interactive Demo</strong> to explore the project. <strong>Watch Demo</strong> opens the animated preview, while <strong>Launch Interactive Demo</strong> opens the working browser application.</p>'
+          if old not in text:
+              raise SystemExit('Expected README wording was not found.')
+          readme.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+          hash="$(sha256sum README.md | awk '{print toupper($1)}')"
+          awk -v hash="$hash" 'NR==1 {$0=hash "  README.md"} {print}' proof/SHA256SUMS.txt > proof/SHA256SUMS.txt.tmp
+          mv proof/SHA256SUMS.txt.tmp proof/SHA256SUMS.txt
+          rm .github/workflows/refine-clickable-ui-wording.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md proof/SHA256SUMS.txt .github/workflows/refine-clickable-ui-wording.yml
+          git commit -m "Use concise clickable UI wording"
+          git push origin HEAD:main
