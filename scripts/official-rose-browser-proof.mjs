@@ -29,6 +29,9 @@ try {
   const chat = page.locator('.rose-window .chat');
   await input.waitFor({ state: 'visible', timeout: 30000 });
   assert.equal((await input.inputValue()).trim(), starter);
+  assert.equal(await page.locator('link[href*="/assets/rose-actions.css"]').count(), 1);
+  assert.equal(await page.locator('script[src*="/assets/rose-actions.js"]').count(), 1);
+  assert.equal(await page.locator('script[src*="/assets/rose-runtime.js"]').count(), 1);
   assert.equal(await page.locator('html').getAttribute('data-hunter-rose-runtime'), 'installed');
   await page.screenshot({ path: path.join(outputDir, 'before-send.png'), fullPage: true });
 
