@@ -54,20 +54,8 @@ fs.writeFileSync(serverFile, source);
 
 const runtimeFile = path.join(__dirname, '..', 'apps', 'demo', 'public', 'rose-runtime.js');
 let runtime = fs.readFileSync(runtimeFile, 'utf8');
-const generatedFallback = `  function ensurePosCard(){
-    var grid=appsGridEl();if(!grid)return;
-    var keyed=grid.querySelector('[data-app-key="pos-system"]');if(keyed)return;
-    var existing=Array.prototype.find.call(grid.querySelectorAll('.app-card'),function(card){return /\\bPOS System\\b/i.test(card.textContent||'');});
-    if(existing){existing.dataset.appKey='pos-system';return;}
-    var card=document.createElement('div');card.className='app-card';card.dataset.appKey='pos-system';
-    card.innerHTML='<div class="big">▣</div><h3>POS System</h3><span class="badge disconnected">Not connected</span><p>Existing THETECHGUY business system; intentionally not connected to this public demo. Authorised users can sign in through a supported browser on a phone, tablet or computer.</p>';grid.appendChild(card);
-  }`;
-const authoritativeOnly = `  function ensurePosCard(){
-    var grid=appsGridEl();if(!grid)return;
-    var existing=Array.prototype.find.call(grid.querySelectorAll('.app-card'),function(card){return /\\bPOS System\\b/i.test(card.textContent||'');});
-    if(existing)existing.dataset.appKey='pos-system';
-  }`;
-if (runtime.includes(generatedFallback)) runtime = runtime.replace(generatedFallback, authoritativeOnly);
-else if (!runtime.includes('if(existing)existing.dataset.appKey')) throw new Error('Could not find current POS runtime anchor');
+const pattern = /  function ensurePosCard\(\)\{[\s\S]*?\n  \}\n\n  function scheduleRestore\(\)\{/;
+if (!pattern.test(runtime)) throw new Error('Could not locate the runtime POS function');
+runtime = runtime.replace(pattern, "  function ensurePosCard(){}\n\n  function scheduleRestore(){");
 fs.writeFileSync(runtimeFile, runtime);
-console.log('Applied official ROSE runtime port with one authoritative POS card');
+console.log('Applied official ROSE runtime port with POS owned by renderApps');
