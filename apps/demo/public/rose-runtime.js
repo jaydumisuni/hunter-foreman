@@ -12,7 +12,7 @@
   function chatEl(){return el('roseChat')||document.querySelector('.rose-window .chat');}
   function appsGridEl(){return el('appsGrid')||document.querySelector('.apps-grid');}
   function getGlobal(name){try{return (0,eval)(name);}catch(error){return undefined;}}
-  function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];});}
+  function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[character];});}
 
   function parseDetails(text){
     var source=String(text||''),lower=source.toLowerCase(),details={};
@@ -95,6 +95,11 @@
   }
 
   async function syncDashboard(task){
+    var host=window.HunterRoseHost;
+    if(host&&typeof host.addTask==='function'){
+      await host.addTask(task);
+      showTaskId(task);setPipeline(true);scheduleRestore();return;
+    }
     var refresh=getGlobal('refreshStatus');if(typeof refresh==='function')await refresh();
     var rows=getGlobal('liveRows');if(!Array.isArray(rows))throw new Error('The demo task store is unavailable.');
     var row=[task.id,task.customerName||'Chilanga Mulilo Client',task.workflow&&task.workflow.label?task.workflow.label:'Event Booking Workflow','IN PROGRESS','Now',Boolean(task.escalation&&task.escalation.required)];
@@ -139,6 +144,7 @@
 
   function resetConversation(){
     state={started:false,created:false,taskId:'',messages:[],details:{}};lastQuestion='';sending=false;
+    var host=window.HunterRoseHost;if(host&&typeof host.reset==='function')host.reset();
     var chat=chatEl();if(chat){chat.classList.remove('conversation-active');if(chat.dataset.initialHtml)chat.innerHTML=chat.dataset.initialHtml;}
     var input=el('messageInput');if(input){input.value=STARTER;input.placeholder='Start with the example request…';}
     var button=el('sendBtn');if(button){button.disabled=false;button.textContent=(typeof tr==='function'?tr('send'):'Send');}setPipeline(false);ensurePosCard();
