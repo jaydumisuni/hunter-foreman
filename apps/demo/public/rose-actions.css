@@ -2,6 +2,7 @@
 #roseChat.conversation-active:empty,.rose-window .chat.conversation-active:empty{min-height:260px}
 .rose-answer-block{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-width:0}
 .rose-answer-block>.bubble{margin-bottom:3px!important}
+.rose-answer-block.rose-streaming .rose-answer-actions,.rose-answer-block.rose-streaming .rose-answer-popover{display:none!important}
 .badge.disconnected{color:var(--o)!important}
 .rose-thinking{min-width:66px!important;width:max-content!important;padding:10px 13px!important}
 .rose-thinking-dots{display:inline-flex;align-items:center;gap:4px;min-height:12px}
