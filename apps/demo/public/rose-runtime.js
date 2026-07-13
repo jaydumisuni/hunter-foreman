@@ -12,7 +12,7 @@
   function chatEl(){return el('roseChat')||document.querySelector('.rose-window .chat');}
   function appsGridEl(){return el('appsGrid')||document.querySelector('.apps-grid');}
   function getGlobal(name){try{return (0,eval)(name);}catch(error){return undefined;}}
-  function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[character];});}
+  function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];});}
 
   function parseDetails(text){
     var source=String(text||''),lower=source.toLowerCase(),details={};
@@ -118,15 +118,10 @@
   function ensurePosCard(){
     var grid=appsGridEl();if(!grid)return;
     var cards=Array.prototype.filter.call(grid.querySelectorAll('.app-card'),function(card){return /\bPOS System\b/i.test(card.textContent||'');});
-    if(cards.length){
-      var keep=cards.find(function(card){return !card.dataset.appKey;})||cards[0];
-      keep.dataset.appKey='pos-system';
-      cards.forEach(function(card){if(card!==keep)card.remove();});
-      return;
-    }
-    if(!grid.querySelector('.app-card'))return;
-    var card=document.createElement('div');card.className='app-card';card.dataset.appKey='pos-system';
-    card.innerHTML='<div class="big">▣</div><h3>POS System</h3><span class="badge disconnected">Not connected</span><p>Existing THETECHGUY business system; intentionally not connected to this public demo. Authorised users can sign in through a supported browser on a phone, tablet or computer.</p>';grid.appendChild(card);
+    if(!cards.length)return;
+    var keep=cards.find(function(card){return !card.dataset.appKey;})||cards[0];
+    keep.dataset.appKey='pos-system';
+    cards.forEach(function(card){if(card!==keep)card.remove();});
   }
 
   function scheduleRestore(){
