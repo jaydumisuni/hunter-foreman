@@ -116,7 +116,10 @@
   }
 
   function ensurePosCard(){
-    var grid=appsGridEl();if(!grid||grid.querySelector('[data-app-key="pos-system"]'))return;
+    var grid=appsGridEl();if(!grid)return;
+    var keyed=grid.querySelector('[data-app-key="pos-system"]');if(keyed)return;
+    var existing=Array.prototype.find.call(grid.querySelectorAll('.app-card'),function(card){return /\bPOS System\b/i.test(card.textContent||'');});
+    if(existing){existing.dataset.appKey='pos-system';return;}
     var card=document.createElement('div');card.className='app-card';card.dataset.appKey='pos-system';
     card.innerHTML='<div class="big">▣</div><h3>POS System</h3><span class="badge disconnected">Not connected</span><p>Existing THETECHGUY business system; intentionally not connected to this public demo. Authorised users can sign in through a supported browser on a phone, tablet or computer.</p>';grid.appendChild(card);
   }
