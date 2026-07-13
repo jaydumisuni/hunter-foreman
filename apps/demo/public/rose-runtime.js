@@ -13,6 +13,7 @@
   function getGlobal(name){try{return (0,eval)(name);}catch(error){return undefined;}}
   function escapeHtml(value){return String(value||'').replace(/[&<>"']/g,function(character){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];});}
   function sleep(milliseconds){return new Promise(function(resolve){setTimeout(resolve,milliseconds);});}
+  function scrollChat(){requestAnimationFrame(function(){var chat=chatEl();if(chat)chat.scrollTop=chat.scrollHeight;});}
 
   function parseDetails(text){
     var source=String(text||''),lower=source.toLowerCase(),details={};
@@ -45,16 +46,47 @@
     return parts.length?parts.join(' • '):String(message||'').slice(0,180);
   }
 
+  function appendExtra(bubble,extra){
+    if(!bubble||!extra)return;
+    var holder=document.createElement('div');holder.innerHTML=extra;
+    while(holder.firstChild)bubble.appendChild(holder.firstChild);
+  }
+
   function createBubble(role,text,extra){
     var chat=chatEl();if(!chat)return null;
     var bubble=document.createElement('div');bubble.className='bubble '+(role==='user'?'client':'rose');
     var small=document.createElement('small');small.textContent=role==='user'?'Client':'Rose';
     var span=document.createElement('span');span.textContent=text;
-    bubble.appendChild(small);bubble.appendChild(span);
-    if(extra){var holder=document.createElement('div');holder.innerHTML=extra;while(holder.firstChild)bubble.appendChild(holder.firstChild);}
+    bubble.appendChild(small);bubble.appendChild(span);appendExtra(bubble,extra);
     chat.appendChild(bubble);
     if(role==='assistant'&&window.HunterRoseActions)window.HunterRoseActions.decorate(bubble,text,lastQuestion);
     return bubble;
+  }
+
+  function wordDelay(chunk){
+    var word=String(chunk||'').trim();
+    var delay=27+Math.min(30,word.length*1.7)+Math.floor(Math.random()*15);
+    if(/[.!?]["'’”’\)\]]*$/.test(word))delay+=105;
+    else if(/[,;:]["'’”’\)\]]*$/.test(word))delay+=50;
+    else if(/[—–-]$/.test(word))delay+=34;
+    return delay;
+  }
+
+  async function revealWords(node,text){
+    var value=String(text||'');
+    if(!node)return;
+    node.textContent='';
+    node.setAttribute('aria-busy','true');
+    node.setAttribute('aria-label',value);
+    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce){node.textContent=value;node.removeAttribute('aria-busy');return;}
+    var chunks=value.match(/\S+\s*/g)||[];
+    var visible='';
+    for(var index=0;index<chunks.length;index+=1){
+      visible+=chunks[index];node.textContent=visible;scrollChat();
+      await sleep(wordDelay(chunks[index]));
+    }
+    node.textContent=value;node.removeAttribute('aria-busy');
   }
 
   function createThinkingBubble(){
@@ -66,25 +98,18 @@
     var small=document.createElement('small');small.textContent='Rose';
     var dots=document.createElement('span');dots.className='rose-thinking-dots';dots.setAttribute('aria-hidden','true');
     for(var index=0;index<3;index+=1){var dot=document.createElement('i');dots.appendChild(dot);}
-    bubble.appendChild(small);bubble.appendChild(dots);chat.appendChild(bubble);
-    requestAnimationFrame(function(){chat.scrollTop=chat.scrollHeight;});
-    return bubble;
+    bubble.appendChild(small);bubble.appendChild(dots);chat.appendChild(bubble);scrollChat();return bubble;
   }
 
   function removeThinkingBubble(bubble){if(bubble&&bubble.parentNode)bubble.remove();}
-
-  async function holdThinkingBubble(bubble,shownAt,minimum){
-    var elapsed=Date.now()-shownAt;
-    if(elapsed<minimum)await sleep(minimum-elapsed);
-    removeThinkingBubble(bubble);
-  }
+  async function holdThinkingBubble(bubble,shownAt,minimum){var elapsed=Date.now()-shownAt;if(elapsed<minimum)await sleep(minimum-elapsed);removeThinkingBubble(bubble);}
 
   function renderConversation(){
     if(!state.started)return;
     var chat=chatEl();if(!chat)return;
     chat.classList.add('conversation-active');chat.innerHTML='';
     state.messages.forEach(function(message){createBubble(message.role,message.content,message.extra||'');});
-    requestAnimationFrame(function(){chat.scrollTop=chat.scrollHeight;});
+    scrollChat();
     var input=el('messageInput');if(input){input.placeholder='Reply to ROSE…';if(input.value===STARTER)input.value='';}
     var button=el('sendBtn');if(button){button.disabled=sending;button.textContent=sending?'ROSE is replying…':(typeof tr==='function'?tr('send'):'Send');}
   }
@@ -92,7 +117,23 @@
   function appendMessage(role,content,extra){
     state.messages.push({role:role,content:String(content||''),extra:extra||''});
     var chat=chatEl();if(!chat||!chat.classList.contains('conversation-active')){renderConversation();return;}
-    createBubble(role,String(content||''),extra||'');requestAnimationFrame(function(){chat.scrollTop=chat.scrollHeight;});
+    createBubble(role,String(content||''),extra||'');scrollChat();
+  }
+
+  async function appendAssistantMessage(content,extra){
+    var value=String(content||'');
+    state.messages.push({role:'assistant',content:value,extra:extra||''});
+    var chat=chatEl();
+    if(!chat||!chat.classList.contains('conversation-active')){renderConversation();return null;}
+    var bubble=createBubble('assistant',value,'');
+    if(!bubble)return null;
+    var block=bubble.closest('.rose-answer-block')||bubble;
+    var textNode=bubble.children[1];
+    block.classList.add('rose-streaming');
+    await revealWords(textNode,value);
+    appendExtra(bubble,extra||'');
+    block.classList.remove('rose-streaming');scrollChat();
+    return bubble;
   }
 
   function apiMessages(){return state.messages.slice(-12).map(function(message){return {role:message.role,content:message.content};});}
@@ -119,8 +160,7 @@
   async function syncDashboard(task){
     var host=window.HunterRoseHost;
     if(host&&typeof host.addTask==='function'){
-      await host.addTask(task);
-      showTaskId(task);setPipeline(true);scheduleRestore();return;
+      await host.addTask(task);showTaskId(task);setPipeline(true);scheduleRestore();return;
     }
     var refresh=getGlobal('refreshStatus');if(typeof refresh==='function')await refresh();
     var rows=getGlobal('liveRows');if(!Array.isArray(rows))throw new Error('The demo task store is unavailable.');
@@ -135,16 +175,14 @@
     await syncDashboard(data.task);return data.task;
   }
 
-  function confirmTask(task,message){
+  async function confirmTask(task,message){
     state.created=true;state.taskId=task.id;
     var confirmation='You’re all set — your request has been recorded and is ready for the events team to follow up. You can keep chatting with me here, and I’ll help you work through the details without starting over. We can look at the date, guest list, invitations, QR check-in, venue or planning timeline. What would you like to sort out first?';
     var extra='<div class="rose-handoff"><b>Request reference:</b><span>'+escapeHtml(task.id)+'</span></div><div class="rose-handoff"><b>What I understood:</b><span>'+escapeHtml(summary(message))+'</span></div>';
-    appendMessage('assistant',confirmation,extra);
+    await appendAssistantMessage(confirmation,extra);
   }
 
-  function ensurePosCard(){
-    var host=window.HunterRoseHost;if(host&&typeof host.ensurePosCard==='function')host.ensurePosCard();
-  }
+  function ensurePosCard(){var host=window.HunterRoseHost;if(host&&typeof host.ensurePosCard==='function')host.ensurePosCard();}
 
   function scheduleRestore(){
     clearTimeout(restoreTimer);restoreTimer=setTimeout(function(){ensurePosCard();if(state.started){var chat=chatEl();if(chat&&!chat.classList.contains('conversation-active'))renderConversation();var input=el('messageInput');if(input){input.placeholder='Reply to ROSE…';if(input.value===STARTER)input.value='';}if(state.taskId)showTaskId({id:state.taskId});}},0);
@@ -156,20 +194,19 @@
     var taskAttempted=false;
     var thinking=null;
     var thinkingShownAt=0;
-    sending=true;state.started=true;lastQuestion=message;mergeDetails(message);input.value='';input.placeholder='Reply to ROSE…';appendMessage('user',message);renderConversation();
+    sending=true;state.started=true;lastQuestion=message;mergeDetails(message);input.value='';input.placeholder='Reply to ROSE…';appendMessage('user',message);
     thinking=createThinkingBubble();thinkingShownAt=Date.now();
     try{
       var turn=await askRose();
       if(!state.created&&turn.readyToCreate){
         taskAttempted=true;
         var task=await createTask(message);
-        renderConversation();
-        thinking=createThinkingBubble();thinkingShownAt=Date.now();
+        renderConversation();thinking=createThinkingBubble();thinkingShownAt=Date.now();
         await holdThinkingBubble(thinking,thinkingShownAt,650);
-        confirmTask(task,message);
+        await confirmTask(task,message);
       }else{
         await holdThinkingBubble(thinking,thinkingShownAt,650);
-        appendMessage('assistant',String(turn.reply||'Of course — tell me what you’d like help with next.'));
+        await appendAssistantMessage(String(turn.reply||'Of course — tell me what you’d like help with next.'));
       }
     }catch(error){
       console.warn(error);removeThinkingBubble(thinking);
@@ -177,21 +214,22 @@
         try{
           taskAttempted=true;
           var fallbackTask=await createTask(message);
-          renderConversation();
-          thinking=createThinkingBubble();thinkingShownAt=Date.now();
+          renderConversation();thinking=createThinkingBubble();thinkingShownAt=Date.now();
           await holdThinkingBubble(thinking,thinkingShownAt,500);
-          confirmTask(fallbackTask,message);
+          await confirmTask(fallbackTask,message);
         }catch(taskError){
           console.warn(taskError);removeThinkingBubble(thinking);
-          appendMessage('assistant','I’m sorry — I couldn’t confirm that your request was saved. Please use Reset and send the prepared request once more.');
+          await appendAssistantMessage('I’m sorry — I couldn’t confirm that your request was saved. Please use Reset and send the prepared request once more.');
         }
       }else if(!state.created){
-        appendMessage('assistant','I understood your request, but I couldn’t confirm that it was saved without risking a duplicate. Please use Reset before trying again.');
+        await appendAssistantMessage('I understood your request, but I couldn’t confirm that it was saved without risking a duplicate. Please use Reset before trying again.');
       }else{
-        appendMessage('assistant','I’m sorry, I couldn’t answer that just now. Your request is still saved, and you can try the question again when you’re ready.');
+        await appendAssistantMessage('I’m sorry, I couldn’t answer that just now. Your request is still saved, and you can try the question again when you’re ready.');
       }
     }finally{
-      removeThinkingBubble(thinking);sending=false;renderConversation();var currentInput=el('messageInput');if(currentInput)currentInput.focus();
+      removeThinkingBubble(thinking);sending=false;
+      var currentButton=el('sendBtn');if(currentButton){currentButton.disabled=false;currentButton.textContent=(typeof tr==='function'?tr('send'):'Send');}
+      var currentInput=el('messageInput');if(currentInput)currentInput.focus();
     }
   }
 
