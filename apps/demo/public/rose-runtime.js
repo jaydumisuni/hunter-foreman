@@ -65,10 +65,10 @@
 
   function wordDelay(chunk){
     var word=String(chunk||'').trim();
-    var delay=27+Math.min(30,word.length*1.7)+Math.floor(Math.random()*15);
-    if(/[.!?]["'’”’\)\]]*$/.test(word))delay+=105;
-    else if(/[,;:]["'’”’\)\]]*$/.test(word))delay+=50;
-    else if(/[—–-]$/.test(word))delay+=34;
+    var delay=70+Math.min(55,word.length*3)+Math.floor(Math.random()*41);
+    if(/[.!?]["'’”’\)\]]*$/.test(word))delay+=280;
+    else if(/[,;:]["'’”’\)\]]*$/.test(word))delay+=130;
+    else if(/[—–-]$/.test(word))delay+=95;
     return delay;
   }
 
