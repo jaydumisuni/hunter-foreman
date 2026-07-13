@@ -21,6 +21,19 @@ page.on('request', request => {
 page.on('pageerror', error => pageErrors.push(String(error)));
 
 const report = { baseUrl, passed: false, apiRequests, pageErrors };
+
+async function proveStreaming(streaming, label) {
+  await streaming.waitFor({ state: 'visible', timeout: 30_000 });
+  const bubble = streaming.locator('.bubble.rose').first();
+  const textNode = bubble.locator('span').first();
+  const partialText = String(await textNode.textContent() || '');
+  const completeText = String(await textNode.getAttribute('aria-label') || '');
+  assert.ok(partialText.trim().length > 0, `${label} did not begin revealing after the thinking pause.`);
+  assert.ok(completeText.length > partialText.length, `${label} appeared at once instead of word by word.`);
+  assert.equal(await streaming.locator('.rose-answer-actions').isVisible().catch(() => false), false, `${label} actions appeared before typing completed.`);
+  return { partialText, completeText };
+}
+
 try {
   await page.request.post(`${baseUrl}/api/reset`);
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -28,6 +41,7 @@ try {
   const send = page.locator('#sendBtn');
   const chat = page.locator('.rose-window .chat');
   const thinking = page.locator('.rose-window .chat .rose-thinking');
+  const streaming = page.locator('.rose-window .chat .rose-answer-block.rose-streaming');
   const completedRose = page.locator('.rose-window .chat .bubble.rose:not(.rose-thinking)');
 
   await input.waitFor({ state: 'visible', timeout: 30000 });
@@ -44,7 +58,11 @@ try {
   assert.doesNotMatch(await chat.innerText(), /request has been recorded/i, 'The completed response appeared before the thinking pause finished.');
   await page.waitForTimeout(350);
   assert.ok(await thinking.isVisible(), 'ROSE thinking dots disappeared too quickly to be perceived.');
-  await thinking.waitFor({ state: 'hidden', timeout: 90000 });
+
+  const firstStream = await proveStreaming(streaming, 'The first ROSE response');
+  assert.equal(await thinking.count(), 0, 'ROSE kept the thinking indicator visible while the response was typing.');
+  await page.screenshot({ path: path.join(outputDir, 'first-word-stream.png'), fullPage: true });
+  await streaming.waitFor({ state: 'hidden', timeout: 30000 });
 
   await page.waitForFunction(() => {
     const node = document.querySelector('.rose-window .chat');
@@ -58,7 +76,7 @@ try {
   assert.equal(await chat.evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(5, 5, 8)');
   assert.equal(new Set(ids).size, 1);
   assert.equal(apiRequests.filter(item => item.method === 'POST' && item.path === '/api/requests').length, 1);
-  assert.equal(await completedRose.count(), 1, 'The first Send should reveal one complete ROSE response, not staged response fragments.');
+  assert.equal(await completedRose.count(), 1, 'The first Send should use one ROSE response bubble.');
   assert.doesNotMatch(firstChat, internalLanguage);
   assert.match(firstChat, /request has been recorded/i);
   assert.equal(await page.locator('#kpiRequests').innerText(), '1');
@@ -74,8 +92,11 @@ try {
   assert.equal(await thinking.locator('.rose-thinking-dots i').count(), 3);
   await page.waitForTimeout(350);
   assert.ok(await thinking.isVisible(), 'ROSE follow-up thinking dots disappeared too quickly.');
-  assert.equal(await completedRose.count(), roseCount, 'A partial follow-up response appeared while ROSE was still thinking.');
-  await thinking.waitFor({ state: 'hidden', timeout: 90000 });
+  assert.equal(await completedRose.count(), roseCount, 'A follow-up response bubble appeared while ROSE was still thinking.');
+
+  const followUpStream = await proveStreaming(streaming, 'The ROSE follow-up');
+  await page.screenshot({ path: path.join(outputDir, 'follow-up-word-stream.png'), fullPage: true });
+  await streaming.waitFor({ state: 'hidden', timeout: 30000 });
   await page.waitForFunction(expected => document.querySelectorAll('.rose-window .chat .bubble.rose:not(.rose-thinking)').length === expected, roseCount + 1, { timeout: 90000 });
 
   const lastAnswer = await completedRose.last().innerText();
@@ -102,7 +123,10 @@ try {
   report.pos = await pos.innerText();
   report.actionRows = await page.locator('.rose-answer-actions').count();
   report.thinkingDotsVerified = true;
-  report.singleFirstResponseVerified = true;
+  report.wordByWordRevealVerified = true;
+  report.singleResponseBubbleVerified = true;
+  report.firstStream = firstStream;
+  report.followUpStream = followUpStream;
   await fs.writeFile(path.join(outputDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
 } catch (error) {
