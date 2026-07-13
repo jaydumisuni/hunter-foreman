@@ -27,6 +27,9 @@ try {
   const input = page.locator('#messageInput');
   const send = page.locator('#sendBtn');
   const chat = page.locator('.rose-window .chat');
+  const thinking = page.locator('.rose-window .chat .rose-thinking');
+  const completedRose = page.locator('.rose-window .chat .bubble.rose:not(.rose-thinking)');
+
   await input.waitFor({ state: 'visible', timeout: 30000 });
   assert.equal((await input.inputValue()).trim(), starter);
   assert.equal(await page.locator('link[href*="/assets/rose-actions.css"]').count(), 1);
@@ -36,6 +39,13 @@ try {
   await page.screenshot({ path: path.join(outputDir, 'before-send.png'), fullPage: true });
 
   await send.click();
+  await thinking.waitFor({ state: 'visible', timeout: 5000 });
+  assert.equal(await thinking.locator('.rose-thinking-dots i').count(), 3, 'ROSE did not show three thinking dots.');
+  assert.doesNotMatch(await chat.innerText(), /request has been recorded/i, 'The completed response appeared before the thinking pause finished.');
+  await page.waitForTimeout(350);
+  assert.ok(await thinking.isVisible(), 'ROSE thinking dots disappeared too quickly to be perceived.');
+  await thinking.waitFor({ state: 'hidden', timeout: 90000 });
+
   await page.waitForFunction(() => {
     const node = document.querySelector('.rose-window .chat');
     return node?.classList.contains('conversation-active') && /request has been recorded/i.test(node.innerText) && /HF-[A-Z0-9]+/.test(node.innerText);
@@ -48,20 +58,27 @@ try {
   assert.equal(await chat.evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(5, 5, 8)');
   assert.equal(new Set(ids).size, 1);
   assert.equal(apiRequests.filter(item => item.method === 'POST' && item.path === '/api/requests').length, 1);
+  assert.equal(await completedRose.count(), 1, 'The first Send should reveal one complete ROSE response, not staged response fragments.');
   assert.doesNotMatch(firstChat, internalLanguage);
-  assert.match(firstChat, /Thanks|I[’']ve got it/i);
   assert.match(firstChat, /request has been recorded/i);
   assert.equal(await page.locator('#kpiRequests').innerText(), '1');
   assert.equal(await page.locator('#kpiActive').innerText(), '1');
   assert.match(await page.locator('#latestTasks').innerText(), new RegExp(ids[0]));
-  assert.ok(await page.locator('.rose-answer-actions').count() >= 2);
+  assert.ok(await page.locator('.rose-answer-actions').count() >= 1);
   await page.screenshot({ path: path.join(outputDir, 'after-first-send.png'), fullPage: true });
 
-  const roseCount = await page.locator('.rose-window .chat .bubble.rose').count();
+  const roseCount = await completedRose.count();
   await input.fill('How should QR check-in work for 200 guests?');
   await send.click();
-  await page.locator('.rose-window .chat .bubble.rose').nth(roseCount).waitFor({ state: 'visible', timeout: 90000 });
-  const lastAnswer = await page.locator('.rose-window .chat .bubble.rose').last().innerText();
+  await thinking.waitFor({ state: 'visible', timeout: 5000 });
+  assert.equal(await thinking.locator('.rose-thinking-dots i').count(), 3);
+  await page.waitForTimeout(350);
+  assert.ok(await thinking.isVisible(), 'ROSE follow-up thinking dots disappeared too quickly.');
+  assert.equal(await completedRose.count(), roseCount, 'A partial follow-up response appeared while ROSE was still thinking.');
+  await thinking.waitFor({ state: 'hidden', timeout: 90000 });
+  await page.waitForFunction(expected => document.querySelectorAll('.rose-window .chat .bubble.rose:not(.rose-thinking)').length === expected, roseCount + 1, { timeout: 90000 });
+
+  const lastAnswer = await completedRose.last().innerText();
   assert.equal(await input.inputValue(), '');
   assert.equal(apiRequests.filter(item => item.method === 'POST' && item.path === '/api/requests').length, 1);
   assert.match(lastAnswer, /unique QR code|unique code/i);
@@ -84,6 +101,8 @@ try {
   report.lastAnswer = lastAnswer;
   report.pos = await pos.innerText();
   report.actionRows = await page.locator('.rose-answer-actions').count();
+  report.thinkingDotsVerified = true;
+  report.singleFirstResponseVerified = true;
   await fs.writeFile(path.join(outputDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
 } catch (error) {
