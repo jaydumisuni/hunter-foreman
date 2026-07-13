@@ -75,6 +75,31 @@ Connected Business Applications
 
 ---
 
+## Assistants in the Demo
+
+The judge-facing experience contains two distinct assistants with different responsibilities.
+
+### Hunter Submission Guide
+
+Hunter is the floating guide on the public submission hub. It helps judges understand the project, architecture, Fireworks evidence, proof package, repositories, presentation, video, and navigation. It can point a judge to the most relevant section after answering, but it does not create customer requests or pretend to operate private business systems.
+
+### ROSE Event Receptionist
+
+ROSE is inside the interactive application. The page opens with a prepared event request so a judge can press **Send** without guessing what to type. ROSE then:
+
+- acknowledges the client warmly;
+- creates one tracked Hunter Foreman request;
+- confirms the request reference and what was understood;
+- clears the composer for natural follow-up questions;
+- keeps the same conversation and request context;
+- helps with invitations, guest registration, QR check-in, approval flows, venues, timelines, packages, and related event planning;
+- avoids exposing provider or backend language to the client;
+- does not claim that unconnected invitations, payments, tickets, WhatsApp messages, QR codes, or POS transactions were completed.
+
+Hunter explains the submission. ROSE demonstrates the customer-to-operations workflow.
+
+---
+
 ## Fireworks AI Integration
 
 Fireworks AI performs semantic understanding of incoming customer requests.
@@ -333,6 +358,8 @@ proof/                  Local evidence runs and generated proof packages
 ## Quick Start
 
 ```bash
+git clone https://github.com/jaydumisuni/hunter-foreman.git
+cd hunter-foreman
 npm install
 npm run dev
 ```
@@ -353,6 +380,23 @@ Check the demo server syntax:
 
 ```bash
 node --check apps/demo/server.js
+```
+
+### Optional Connected App Bridge Demo
+
+Run the optional receiver in a second terminal:
+
+```bash
+git clone https://github.com/jaydumisuni/hunter-foreman-demo.git
+cd hunter-foreman-demo
+npm install
+npm run dev
+```
+
+The receiver opens at:
+
+```text
+http://localhost:3100
 ```
 
 ---
