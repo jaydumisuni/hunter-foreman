@@ -13,4 +13,6 @@ Runtime contract:
 - follow-up questions do not create another request;
 - the Apps view contains one POS System card marked **Not connected**.
 
+The inline `renderApps()` data is authoritative for Apps cards. The ROSE runtime does not inject a second POS card, which keeps Reset, refresh and tab navigation deterministic.
+
 `official-rose-browser-proof.yml` verifies this contract in a fresh checkout with the real Node server at `http://127.0.0.1:3000`.
