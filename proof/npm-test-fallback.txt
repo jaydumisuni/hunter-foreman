@@ -1,5 +1,7 @@
-
 > hunter-foreman@0.1.0 test
-> node scripts/smoke-test.js
+> node scripts/smoke-test.js && node scripts/status-label-test.js && node scripts/repository-consistency-test.js && node scripts/rose-service-test.js
 
 Hunter Foreman smoke test passed
+Hunter Foreman integration status label test passed
+Hunter Foreman repository consistency test passed
+ROSE service proof passed: guided intake, Fireworks routing, client-safe filtering and no-key fallback.
