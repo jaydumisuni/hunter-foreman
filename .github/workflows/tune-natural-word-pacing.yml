@@ -1,0 +1,59 @@
+name: Tune ROSE natural word pacing
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/tune-natural-word-pacing.yml
+
+permissions:
+  contents: write
+
+jobs:
+  tune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Slow the word reveal to a natural reading rhythm
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/demo/public/rose-runtime.js')
+          text = path.read_text(encoding='utf-8')
+          old = """  function wordDelay(chunk){
+            var word=String(chunk||'').trim();
+            var delay=27+Math.min(30,word.length*1.7)+Math.floor(Math.random()*15);
+            if(/[.!?][\"'’”’\\)\\]]*$/.test(word))delay+=105;
+            else if(/[,;:][\"'’”’\\)\\]]*$/.test(word))delay+=50;
+            else if(/[—–-]$/.test(word))delay+=34;
+            return delay;
+          }"""
+          new = """  function wordDelay(chunk){
+            var word=String(chunk||'').trim();
+            var delay=70+Math.min(55,word.length*3)+Math.floor(Math.random()*41);
+            if(/[.!?][\"'’”’\\)\\]]*$/.test(word))delay+=280;
+            else if(/[,;:][\"'’”’\\)\\]]*$/.test(word))delay+=130;
+            else if(/[—–-]$/.test(word))delay+=95;
+            return delay;
+          }"""
+          if old not in text:
+              raise SystemExit('Expected ROSE wordDelay block not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+          node --check apps/demo/public/rose-runtime.js
+          rm .github/workflows/tune-natural-word-pacing.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/demo/public/rose-runtime.js .github/workflows/tune-natural-word-pacing.yml
+          git commit -m "Give ROSE a natural word-by-word rhythm"
+          git push origin HEAD:main
