@@ -1,0 +1,87 @@
+name: Official clone ROSE browser proof
+
+on:
+  pull_request:
+    paths:
+      - apps/demo/server.js
+      - apps/demo/rose.js
+      - apps/demo/public/**
+      - scripts/official-rose-browser-proof.mjs
+      - .github/workflows/official-rose-browser-proof.yml
+  push:
+    branches:
+      - main
+    paths:
+      - apps/demo/server.js
+      - apps/demo/rose.js
+      - apps/demo/public/**
+      - scripts/official-rose-browser-proof.mjs
+      - .github/workflows/official-rose-browser-proof.yml
+
+permissions:
+  contents: read
+
+jobs:
+  browser-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify repository tests and syntax
+        run: |
+          npm test
+          node --check apps/demo/server.js
+          node --check apps/demo/rose.js
+          node --check apps/demo/public/rose-runtime.js
+          node --check apps/demo/public/rose-actions.js
+      - name: Install disposable browser tools outside the repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/hf-browser-tools /tmp/hf-official-proof
+          mkdir -p /tmp/hf-browser-tools /tmp/hf-official-proof
+          cd /tmp/hf-browser-tools
+          npm init -y >/dev/null
+          npm install playwright@1.54.1
+          npx playwright install --with-deps chromium
+          cp "$GITHUB_WORKSPACE/scripts/official-rose-browser-proof.mjs" /tmp/hf-browser-tools/official-rose-browser-proof.mjs
+      - name: Start the official Node clone on port 3000
+        shell: bash
+        run: |
+          set -euo pipefail
+          AI_PROVIDER=rules PORT=3000 node apps/demo/server.js > /tmp/hf-official-proof/server.log 2>&1 &
+          echo $! > /tmp/hf-official-proof/server.pid
+          for attempt in {1..60}; do
+            if ! kill -0 "$(cat /tmp/hf-official-proof/server.pid)" 2>/dev/null; then
+              cat /tmp/hf-official-proof/server.log
+              exit 1
+            fi
+            if curl --fail --silent --max-time 5 http://127.0.0.1:3000/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/hf-official-proof/server.log
+          exit 1
+      - name: Run official browser proof
+        env:
+          BASE_URL: http://127.0.0.1:3000
+          PROOF_OUTPUT_DIR: /tmp/hf-official-proof/results
+        run: node /tmp/hf-browser-tools/official-rose-browser-proof.mjs
+      - name: Stop server and prove checkout stayed clean
+        if: always()
+        shell: bash
+        run: |
+          if test -f /tmp/hf-official-proof/server.pid; then kill "$(cat /tmp/hf-official-proof/server.pid)" 2>/dev/null || true; fi
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-clone-rose-browser-proof
+          path: /tmp/hf-official-proof/
+          if-no-files-found: error
