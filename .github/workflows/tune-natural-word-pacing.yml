@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - .github/workflows/tune-natural-word-pacing.yml
+  pull_request:
+    paths:
+      - .github/tune-natural-word-pacing-trigger.txt
 
 permissions:
   contents: write
