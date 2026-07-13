@@ -1,0 +1,42 @@
+name: Apply official ROSE port
+
+on:
+  push:
+    branches:
+      - port-shared-rose-experience
+    paths:
+      - scripts/apply-rose-port.js
+      - .github/workflows/apply-rose-port.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: port-shared-rose-experience
+          fetch-depth: 0
+      - name: Apply deterministic server patch
+        run: node scripts/apply-rose-port.js
+      - name: Check patched JavaScript syntax
+        run: |
+          node --check apps/demo/server.js
+          node --check apps/demo/rose.js
+          node --check apps/demo/public/rose-runtime.js
+          node --check apps/demo/public/rose-actions.js
+      - name: Commit patched server
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- apps/demo/server.js; then
+            echo "Server already contains the ROSE port."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/demo/server.js
+          git commit -m "Wire the continuing ROSE runtime into the Node demo"
+          git push origin HEAD:port-shared-rose-experience
