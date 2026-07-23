@@ -1,0 +1,42 @@
+name: Temporary Hunter proof artifact
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  HUNTER_PROOF_URL: https://ec391a63-hunter-ui-review.thetechguy712.workers.dev/internal-proof
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch exact proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            --retry 6 --retry-delay 2 --retry-all-errors \
+            "$HUNTER_PROOF_URL" \
+            --output hunter-proof.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('hunter-proof.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          p.write_text(json.dumps(data, indent=2, sort_keys=False) + '\n', encoding='utf-8')
+          print('proof captured:', data.get('status'), data.get('passed'), data.get('sourceCommit'))
+          PY
+
+      - name: Upload private Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hunter-proof-json
+          path: hunter-proof.json
+          if-no-files-found: error
+          retention-days: 1
