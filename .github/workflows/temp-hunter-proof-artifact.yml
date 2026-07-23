@@ -1,4 +1,4 @@
-name: Temporary Hunter proof artifact
+name: Temporary Hunter UI proof
 
 on:
   pull_request:
@@ -9,34 +9,40 @@ permissions:
   contents: read
 
 env:
-  HUNTER_PROOF_URL: https://ec391a63-hunter-ui-review.thetechguy712.workers.dev/internal-proof
+  HUNTER_PROOF_URL: https://ec391a63-hunter-ui-review.thetechguy712.workers.dev/portal
 
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
-      - name: Fetch exact proof
+      - uses: actions/checkout@v4
+
+      - name: Install Playwright client
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location \
-            --retry 6 --retry-delay 2 --retry-all-errors \
-            "$HUNTER_PROOF_URL" \
-            --output hunter-proof.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          p = Path('hunter-proof.json')
-          data = json.loads(p.read_text(encoding='utf-8'))
-          p.write_text(json.dumps(data, indent=2, sort_keys=False) + '\n', encoding='utf-8')
-          print('proof captured:', data.get('status'), data.get('passed'), data.get('sourceCommit'))
-          PY
+          npm init -y
+          npm install --no-save playwright-core
 
-      - name: Upload private Actions artifact
+      - name: Run exact deployed UI proof
+        id: proof
+        continue-on-error: true
+        shell: bash
+        run: node temp-hunter-ui-proof.mjs
+
+      - name: Upload UI proof evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hunter-proof-json
-          path: hunter-proof.json
+          name: hunter-ui-proof
+          path: |
+            hunter-ui-proof.json
+            *-hunter-proof.png
           if-no-files-found: error
           retention-days: 1
+
+      - name: Enforce proof result
+        if: steps.proof.outcome != 'success'
+        shell: bash
+        run: exit 1
