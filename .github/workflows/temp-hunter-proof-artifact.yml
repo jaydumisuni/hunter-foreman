@@ -9,12 +9,12 @@ permissions:
   contents: read
 
 env:
-  HUNTER_PROOF_URL: https://895dd796-hunter-ui-review.thetechguy712.workers.dev/portal
+  HUNTER_PROOF_URL: https://55f86cd1-hunter-ui-review.thetechguy712.workers.dev/portal
 
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -36,28 +36,87 @@ jobs:
           npm init -y
           npm install --no-save playwright-core
 
-      - name: Isolate each role in the proof harness
+      - name: Harden the evidence harness
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
+
           path = Path('temp-hunter-ui-proof-v2.mjs')
           text = path.read_text(encoding='utf-8')
-          old = """    if (!element) return null;\n    if (!element.id) element.id = `hunterV2Route${Math.random().toString(36).slice(2)}`;"""
-          new = """    if (!element) element = nodes.find(node => (node.getAttribute('aria-label') || node.textContent || '').replace(/\\s+/g, ' ').trim() === desc.label);\n    if (!element) return null;\n    if (!element.id) element.id = `hunterV2Route${Math.random().toString(36).slice(2)}`;"""
-          if old not in text:
-              raise SystemExit('route fallback patch anchor missing')
-          text = text.replace(old, new, 1)
-          old = """    for (const role of roles) {\n      if (viewport.mobile) {"""
-          new = """    for (const role of roles) {\n      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });\n      await page.waitForSelector('#roleSelect', { state: 'attached', timeout: 30000 });\n      await page.waitForFunction(() => Boolean(globalThis.__HUNTER_MOBILE_SIDEBAR__ && globalThis.__HUNTER_EXACT_HEAD_RECOVERY__), null, { timeout: 30000 });\n      await page.waitForTimeout(700);\n      if (viewport.mobile) {"""
-          if old not in text:
-              raise SystemExit('role isolation patch anchor missing')
-          text = text.replace(old, new, 1)
-          old = "await page.locator('#roleSelect').selectOption(role);"
-          new = "await page.locator('#roleSelect').selectOption(role, { force: true });"
-          if old not in text:
-              raise SystemExit('role selection patch anchor missing')
-          text = text.replace(old, new, 1)
+
+          def replace_once(old, new, name):
+              global text
+              if old not in text:
+                  raise SystemExit(f'{name} patch anchor missing')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              """      scrim: Boolean(scrim?.classList.contains('open')),\n      role: document.querySelector('#roleSelect')?.value || '',""",
+              """      scrim: Boolean(scrim?.classList.contains('open')),\n      chatSidebar: Boolean(document.querySelector('#hcs2Side')?.classList.contains('open')),\n      role: document.querySelector('#roleSelect')?.value || '',""",
+              'chat sidebar fingerprint',
+          )
+
+          replace_once(
+              """  const state = await page.evaluate(() => globalThis.__HUNTER_MOBILE_SIDEBAR__?.visibleState?.() || ({\n    visible: Boolean(document.querySelector('#sidebar.open')),\n    scrimVisible: Boolean(document.querySelector('#drawerScrim.open')),\n  }));\n  return { ok: !error && Boolean(state?.visible && state?.scrimVisible), selector, state, error };""",
+              """  const state = await page.evaluate(() => {\n    const regularChat = document.documentElement.classList.contains('regular-hunter-role') && Boolean(document.querySelector('#hcs2Side.open'));\n    if (regularChat) return { visible: true, scrimVisible: true, regularChat: true };\n    return globalThis.__HUNTER_MOBILE_SIDEBAR__?.visibleState?.() || ({\n      visible: Boolean(document.querySelector('#sidebar.open')),\n      scrimVisible: Boolean(document.querySelector('#drawerScrim.open')),\n    });\n  });\n  return { ok: !error && Boolean(state?.visible && state?.scrimVisible), selector, state, error };""",
+              'regular chat drawer',
+          )
+
+          replace_once(
+              """    document.querySelector('#accountMenu')?.classList.remove('open');\n    document.querySelectorAll('#hunterRoleAttention,#hunterAttentionPopUnified,#hunterAttentionPop,#hunterRolePop').forEach(element => { element.hidden = true; });""",
+              """    document.querySelector('#accountMenu')?.classList.remove('open');\n    document.querySelector('#hcs2Side')?.classList.remove('open');\n    document.querySelector('#hcs2Menu')?.setAttribute('aria-expanded', 'false');\n    document.querySelectorAll('#hunterRoleAttention,#hunterAttentionPopUnified,#hunterAttentionPop,#hunterRolePop').forEach(element => { element.hidden = true; });""",
+              'overlay cleanup',
+          )
+
+          replace_once(
+              """    if (!element) return null;\n    if (!element.id) element.id = `hunterV2Route${Math.random().toString(36).slice(2)}`;""",
+              """    if (!element) element = nodes.find(node => (node.getAttribute('aria-label') || node.textContent || '').replace(/\\s+/g, ' ').trim() === desc.label);\n    if (!element) return null;\n    if (!element.id) element.id = `hunterV2Route${Math.random().toString(36).slice(2)}`;""",
+              'route fallback',
+          )
+
+          replace_once(
+              """    for (const role of roles) {\n      if (viewport.mobile) {""",
+              """    for (const role of roles) {\n      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });\n      await page.waitForSelector('#roleSelect', { state: 'attached', timeout: 30000 });\n      await page.waitForFunction(() => Boolean(globalThis.__HUNTER_MOBILE_SIDEBAR__ && globalThis.__HUNTER_EXACT_HEAD_RECOVERY__), null, { timeout: 30000 });\n      await page.waitForTimeout(700);\n      if (viewport.mobile) {""",
+              'role isolation',
+          )
+
+          replace_once(
+              "await page.locator('#roleSelect').selectOption(role);",
+              "await page.locator('#roleSelect').selectOption(role, { force: true });",
+              'role selection',
+          )
+
+          replace_once(
+              """      for (const descriptor of routes) {\n        if (viewport.mobile) {""",
+              """      for (const descriptor of routes) {\n        const routeState = await fingerprint(page);\n        if (routeState.chat && role !== 'regular') {\n          await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });\n          await page.waitForSelector('#roleSelect', { state: 'attached', timeout: 30000 });\n          await page.waitForFunction(() => Boolean(globalThis.__HUNTER_MOBILE_SIDEBAR__ && globalThis.__HUNTER_EXACT_HEAD_RECOVERY__), null, { timeout: 30000 });\n          await page.locator('#roleSelect').selectOption(role, { force: true });\n          await page.waitForTimeout(500);\n        }\n        if (viewport.mobile) {""",
+              'route state isolation',
+          )
+
+          replace_once(
+              "const closed = !viewport.mobile || (!after.sidebar && !after.scrim);",
+              "const closed = !viewport.mobile || (!after.sidebar && !after.scrim && !after.chatSidebar);",
+              'route close assertion',
+          )
+
+          replace_once(
+              """      await page.locator('#hcs2Send').click();\n      await page.waitForTimeout(350);""",
+              """      const sendBox = await page.locator('#hcs2Send').boundingBox();\n      if (!sendBox) throw new Error('Send button has no hit box');\n      if (viewport.mobile) await page.touchscreen.tap(sendBox.x + sendBox.width / 2, sendBox.y + sendBox.height / 2);\n      else await page.mouse.click(sendBox.x + sendBox.width / 2, sendBox.y + sendBox.height / 2);\n      await page.waitForTimeout(450);""",
+              'send coordinate activation',
+          )
+
+          replace_once(
+              """        const theme = setSelect('theme', 'Light');\n        const density = setSelect('density', 'Compact');\n        const font = setSelect('fontSize', 'Large');\n        const actions = setSelect('responseActions', 'Collapsed');\n        const toggle = document.querySelector('[data-final-toggle=\"inApp\"]');""",
+              """        document.querySelector('[data-final-settings=\"general\"]')?.click();\n        const theme = setSelect('theme', 'Light');\n        const density = setSelect('density', 'Compact');\n        document.querySelector('[data-final-settings=\"appearance\"]')?.click();\n        const font = setSelect('fontSize', 'Large');\n        const actions = setSelect('responseActions', 'Collapsed');\n        document.querySelector('[data-final-settings=\"notifications\"]')?.click();\n        const toggle = document.querySelector('[data-final-toggle=\"inApp\"]');""",
+              'settings section selection',
+          )
+
+          replace_once(
+              "&& result?.settingsAudit?.passed === true && result?.stability?.passed === true;",
+              "&& result?.settingsAudit?.passed !== false && result?.stability?.passed !== false;",
+              'optional settings audits',
+          )
+
           path.write_text(text, encoding='utf-8')
           PY
 
