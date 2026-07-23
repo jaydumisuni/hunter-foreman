@@ -1,3 +1,3 @@
 # Temporary proof relay
 
-Robust exact-head UI proof v2 is triggered against mobile completed-click recovery commit b0f92368.
+Full exact-head UI proof is triggered against settings and regular-chat recovery commit e58181c6.
