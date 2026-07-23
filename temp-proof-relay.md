@@ -1,3 +1,3 @@
 # Temporary proof relay
 
-Exact deployed UI interaction proof and fast source HTML capture are triggered from this temporary branch.
+Robust exact-head UI proof v2 is triggered against recovered Hunter commit bb80d3eb.
