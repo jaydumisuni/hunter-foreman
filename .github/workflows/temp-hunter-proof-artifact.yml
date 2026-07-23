@@ -9,12 +9,12 @@ permissions:
   contents: read
 
 env:
-  HUNTER_PROOF_URL: https://ec391a63-hunter-ui-review.thetechguy712.workers.dev/portal
+  HUNTER_PROOF_URL: https://576f31e6-hunter-ui-review.thetechguy712.workers.dev/portal
 
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -36,22 +36,22 @@ jobs:
           npm init -y
           npm install --no-save playwright-core
 
-      - name: Run exact deployed UI proof
+      - name: Run exact deployed UI proof v2
         id: proof
         continue-on-error: true
         shell: bash
-        run: node temp-hunter-ui-proof.mjs
+        run: node temp-hunter-ui-proof-v2.mjs
 
       - name: Upload UI proof evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hunter-ui-proof
+          name: hunter-ui-proof-v2
           path: |
-            hunter-ui-proof.json
+            hunter-ui-proof-v2.json
             hunter-portal.html
             hunter-portal-headers.txt
-            *-hunter-proof.png
+            *-hunter-proof-v2.png
           if-no-files-found: error
           retention-days: 1
 
