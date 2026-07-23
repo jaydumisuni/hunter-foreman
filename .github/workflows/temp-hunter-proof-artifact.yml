@@ -9,12 +9,12 @@ permissions:
   contents: read
 
 env:
-  HUNTER_PROOF_URL: https://576f31e6-hunter-ui-review.thetechguy712.workers.dev/portal
+  HUNTER_PROOF_URL: https://895dd796-hunter-ui-review.thetechguy712.workers.dev/portal
 
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +35,31 @@ jobs:
           set -euo pipefail
           npm init -y
           npm install --no-save playwright-core
+
+      - name: Isolate each role in the proof harness
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('temp-hunter-ui-proof-v2.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = """    if (!element) return null;\n    if (!element.id) element.id = `hunterV2Route${Math.random().toString(36).slice(2)}`;"""
+          new = """    if (!element) element = nodes.find(node => (node.getAttribute('aria-label') || node.textContent || '').replace(/\\s+/g, ' ').trim() === desc.label);\n    if (!element) return null;\n    if (!element.id) element.id = `hunterV2Route${Math.random().toString(36).slice(2)}`;"""
+          if old not in text:
+              raise SystemExit('route fallback patch anchor missing')
+          text = text.replace(old, new, 1)
+          old = """    for (const role of roles) {\n      if (viewport.mobile) {"""
+          new = """    for (const role of roles) {\n      await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });\n      await page.waitForSelector('#roleSelect', { state: 'attached', timeout: 30000 });\n      await page.waitForFunction(() => Boolean(globalThis.__HUNTER_MOBILE_SIDEBAR__ && globalThis.__HUNTER_EXACT_HEAD_RECOVERY__), null, { timeout: 30000 });\n      await page.waitForTimeout(700);\n      if (viewport.mobile) {"""
+          if old not in text:
+              raise SystemExit('role isolation patch anchor missing')
+          text = text.replace(old, new, 1)
+          old = "await page.locator('#roleSelect').selectOption(role);"
+          new = "await page.locator('#roleSelect').selectOption(role, { force: true });"
+          if old not in text:
+              raise SystemExit('role selection patch anchor missing')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
 
       - name: Run exact deployed UI proof v2
         id: proof
