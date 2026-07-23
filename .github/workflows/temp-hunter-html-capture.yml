@@ -1,0 +1,35 @@
+name: Temporary Hunter HTML capture
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Capture exact deployed HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            'https://ec391a63-hunter-ui-review.thetechguy712.workers.dev/portal?hunter-diagnostics=1&srg-headless=1' \
+            --output hunter-portal.html
+          curl --fail --silent --show-error --location --head \
+            'https://ec391a63-hunter-ui-review.thetechguy712.workers.dev/portal?hunter-diagnostics=1&srg-headless=1' \
+            --output hunter-portal-headers.txt
+
+      - name: Upload captured HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: hunter-html-capture
+          path: |
+            hunter-portal.html
+            hunter-portal-headers.txt
+          if-no-files-found: error
+          retention-days: 1
