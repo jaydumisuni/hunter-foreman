@@ -18,6 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Capture exact deployed HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            "$HUNTER_PROOF_URL?hunter-diagnostics=1&srg-headless=1" \
+            --output hunter-portal.html
+          curl --fail --silent --show-error --location --head \
+            "$HUNTER_PROOF_URL?hunter-diagnostics=1&srg-headless=1" \
+            --output hunter-portal-headers.txt
+
       - name: Install Playwright client
         shell: bash
         run: |
@@ -38,6 +49,8 @@ jobs:
           name: hunter-ui-proof
           path: |
             hunter-ui-proof.json
+            hunter-portal.html
+            hunter-portal-headers.txt
             *-hunter-proof.png
           if-no-files-found: error
           retention-days: 1
